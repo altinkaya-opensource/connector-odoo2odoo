@@ -100,6 +100,12 @@ class OdooSaleOrderExporter(Component):
                     },
                 )
 
+        execute_job = self.binding.odoo_id.active_job_ids.filtered(
+            lambda j: "execute_method" in j.func_string
+        )
+        if execute_job:
+            execute_job.run_next_job()
+
 
 class SaleOrderExportMapper(Component):
     _name = "odoo.sale.order.export.mapper"

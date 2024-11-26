@@ -135,7 +135,7 @@ class OdooPartnerExporter(Component):
                 "Created company %s must have vat number" % created_company.name
             )
         # To avoid infinite loop
-        self.binding.external_id = 0
+        # self.binding.external_id = 0
         external_company = self.backend_adapter.search(
             model="res.partner",
             domain=[

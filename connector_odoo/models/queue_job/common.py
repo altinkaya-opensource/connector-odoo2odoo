@@ -31,6 +31,7 @@ class JobQueue(models.Model):
                     ("func_string", "=", record.func_string),
                     ("state", "in", ("pending", "enqueued", "started")),
                     ("model_name", "=", record.model_name),
+                    ("model_name", "=like", "odoo.%"),
                     ("channel", "=", record.channel),
                     ("id", "!=", record.id),
                 ],
@@ -48,3 +49,12 @@ class JobQueue(models.Model):
         for record in res:
             if record.duplicate:
                 record.state = "done"
+                record.result = "Duplicate job automatically marked as done."
+
+    def run_next_job(self):
+        """
+        Run the next specific job.
+        """
+        self.ensure_one()
+        self.priority = 0
+        return True

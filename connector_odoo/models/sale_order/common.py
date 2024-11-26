@@ -33,28 +33,28 @@ class OdooSaleOrder(models.Model):
         ),
     ]
 
-    def _compute_import_state(self):
+    def _compute_sync_state(self):
         for order_id in self:
             waiting = len(
-                order_id.queue_job_ids.filtered(
+                order_id.odoo_id.active_job_ids.filtered(
                     lambda j: j.state in ("pending", "enqueued", "started")
                 )
             )
-            error = len(order_id.queue_job_ids.filtered(lambda j: j.state == "failed"))
+            error = len(
+                order_id.odoo_id.active_job_ids.filtered(lambda j: j.state == "failed")
+            )
             if waiting:
-                order_id.import_state = "waiting"
+                order_id.sync_state = "waiting"
             elif error:
-                order_id.import_state = "error_sync"
+                order_id.sync_state = "error_sync"
             elif round(order_id.backend_amount_total, 2) != round(
                 order_id.amount_total, 2
             ):
-                order_id.import_state = "error_amount"
-            # elif order_id.backend_picking_count != len(order_id.picking_ids):
-            #     order_id.import_state = "error_sync"
+                order_id.sync_state = "error_amount"
             else:
-                order_id.import_state = "done"
+                order_id.sync_state = "done"
 
-    import_state = fields.Selection(
+    sync_state = fields.Selection(
         [
             ("waiting", "Waiting"),
             ("error_sync", "Sync Error"),
@@ -62,7 +62,7 @@ class OdooSaleOrder(models.Model):
             ("done", "Done"),
         ],
         default="waiting",
-        compute=_compute_import_state,
+        compute=_compute_sync_state,
     )
 
     def name_get(self):
@@ -112,9 +112,22 @@ class SaleOrder(models.Model):
         string="Odoo Bindings",
     )
 
-    queue_job_ids = fields.Many2many(
+    active_job_ids = fields.Many2many(
         comodel_name="queue.job",
+        compute="_compute_active_job_ids",
     )
+
+    def _compute_active_job_ids(self):
+        for record in self:
+            if record.bind_ids:
+                record.active_job_ids = self.env["queue.job"].search(
+                    [
+                        ("state", "not in", ["cancelled", "done"]),
+                        ("func_string", "=like", str(record.bind_ids) + "%"),
+                    ]
+                )
+            else:
+                record.active_job_ids = False
 
     def action_confirm(self):
         res = super(SaleOrder, self).action_confirm()

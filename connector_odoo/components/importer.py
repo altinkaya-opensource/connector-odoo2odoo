@@ -337,7 +337,7 @@ class OdooImporter(AbstractComponent):
             _logger.info("Already up-to-date")
             return _("Already up-to-date.")
 
-        self._link_queue_job(binding)
+        # self._link_queue_job(binding)
 
         self._before_import()
 

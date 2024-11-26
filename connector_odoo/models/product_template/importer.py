@@ -63,8 +63,6 @@ class ProductTemplateImportMapper(Component):
     @mapping
     def dimensions(self, record):
         binder = self.binder_for("odoo.uom.uom")
-        weight_uom = binder.to_internal(record["weight_uom_id"][0], unwrap=True)
-        volume_uom = binder.to_internal(record["volume_uom_id"][0], unwrap=True)
         return {
             "dimensional_uom_id": (
                 binder.to_internal(record["dimensional_uom_id"][0], unwrap=True).id
@@ -78,8 +76,16 @@ class ProductTemplateImportMapper(Component):
             "weight": record["weight"],
             "product_volume": record["volume"],
             "volume": record["volume"],
-            "weight_uom_id": weight_uom.id,
-            "volume_uom_id": volume_uom.id,
+            "weight_uom_id": (
+                binder.to_internal(record["weight_uom_id"][0], unwrap=True).id
+                if record["weight_uom_id"]
+                else False
+            ),
+            "volume_uom_id": (
+                binder.to_internal(record["volume_uom_id"][0], unwrap=True).id
+                if record["volume_uom_id"]
+                else False
+            ),
         }
 
     @mapping
@@ -329,4 +335,8 @@ class ProductTemplateImporter(Component):
             sale_description = translations.pop("short_public_description", False)
             translations["description_sale"] = sale_description
             translations.pop("description", False)  # This is not translated in v12
+            # Also exclude the UOM fields from translations
+            translations.pop("volume_uom_name", False)
+            translations.pop("weight_uom_name", False)
+            translations.pop("uom_name", False)
         return super(ProductTemplateImporter, self)._translate_fields(binding)

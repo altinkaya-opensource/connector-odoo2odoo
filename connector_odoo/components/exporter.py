@@ -400,7 +400,7 @@ class OdooExporter(AbstractComponent):
             fields = None  # should be created with all the fields
 
         # Add relation between job and binding, so we can monitor the process
-        self._link_queue_job(self.binding)
+        # self._link_queue_job(self.binding)
 
         # run some logic before the export
         self._before_export()
