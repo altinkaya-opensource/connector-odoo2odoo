@@ -86,7 +86,6 @@ class OdooPartnerExporter(Component):
         match_domain = [
             ("vat", "=", self.binding.vat),
             ("parent_id", "=", False),
-            # ("ecommerce_partner", "=", False),
         ]
         matched_partner = self.backend_adapter.search(
             model="res.partner",
@@ -135,13 +134,12 @@ class OdooPartnerExporter(Component):
                 "Created company %s must have vat number" % created_company.name
             )
         # To avoid infinite loop
-        # self.binding.external_id = 0
+        self.binding.external_id = False
         external_company = self.backend_adapter.search(
             model="res.partner",
             domain=[
                 ("vat", "=", created_company.vat),
                 ("parent_id", "=", False),
-                # ("ecommerce_partner", "=", False),
             ],
             limit=1,
         )
@@ -168,8 +166,7 @@ class OdooPartnerExporter(Component):
             self.binding.parent_id = imported_partner.odoo_id
             # Bir şirketle eşleştirebildik, oluşturduğumuz dummy şirketi çöpe at.
             created_company.unlink()
-        else:
-            created_company.ecommerce_partner = True
+
         return True
 
     def _export_dependencies(self):

@@ -4,10 +4,12 @@
 
 import logging
 import ast
-from odoo import fields, models, api
+from odoo import fields, models, api, _
+from odoo.exceptions import ValidationError
 
 from odoo.addons.component.core import Component
 from odoo.addons.component_event.components.event import skip_if
+
 
 _logger = logging.getLogger(__name__)
 
@@ -32,6 +34,20 @@ class OdooSaleOrder(models.Model):
             "External ID (external_id) must be unique!",
         ),
     ]
+
+    @api.model
+    def execute_method(self, backend, model, method, args=None, context=None):
+        if self.sync_state == "error_amount":
+            raise ValidationError(
+                _(
+                    "The order's amount does not match the backend's. "
+                    "Please resync the order."
+                )
+            )
+
+        return super(OdooSaleOrder, self).execute_method(
+            backend, model, method, args=args, context=context
+        )
 
     def _compute_sync_state(self):
         for order_id in self:
