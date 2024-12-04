@@ -2,7 +2,6 @@
 # flake8: noqa
 from . import queue_job
 
-# from . import base # Todo: yigit: check if this is needed.
 from . import odoo_binding  # Keep this order for inheritance
 from . import odoo_backend
 
@@ -46,6 +45,8 @@ from . import account_payment
 from . import utm_source
 from . import utm_medium
 from . import utm_campaign
+from . import payment_provider_error
+from . import product_brand
 
 # Disabled Models
 from . import purchase_order

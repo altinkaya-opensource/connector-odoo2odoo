@@ -4,17 +4,19 @@
 
 import logging
 import ast
-from odoo import fields, models, api
+from odoo import fields, models, api, _
+from odoo.exceptions import ValidationError
 
 from odoo.addons.component.core import Component
 from odoo.addons.component_event.components.event import skip_if
+
 
 _logger = logging.getLogger(__name__)
 
 
 class OdooSaleOrder(models.Model):
     _special_channel = "root.5"
-    _queue_priority = 5
+    _queue_priority = 1
     _name = "odoo.sale.order"
     _inherit = "odoo.binding"
     _inherits = {"sale.order": "odoo_id"}
@@ -33,28 +35,42 @@ class OdooSaleOrder(models.Model):
         ),
     ]
 
-    def _compute_import_state(self):
+    @api.model
+    def execute_method(self, backend, model, method, args=None, context=None):
+        if self.sync_state == "error_amount":
+            raise ValidationError(
+                _(
+                    "The order's amount does not match the backend's. "
+                    "Please resync the order."
+                )
+            )
+
+        return super(OdooSaleOrder, self).execute_method(
+            backend, model, method, args=args, context=context
+        )
+
+    def _compute_sync_state(self):
         for order_id in self:
             waiting = len(
-                order_id.queue_job_ids.filtered(
+                order_id.odoo_id.active_job_ids.filtered(
                     lambda j: j.state in ("pending", "enqueued", "started")
                 )
             )
-            error = len(order_id.queue_job_ids.filtered(lambda j: j.state == "failed"))
+            error = len(
+                order_id.odoo_id.active_job_ids.filtered(lambda j: j.state == "failed")
+            )
             if waiting:
-                order_id.import_state = "waiting"
+                order_id.sync_state = "waiting"
             elif error:
-                order_id.import_state = "error_sync"
+                order_id.sync_state = "error_sync"
             elif round(order_id.backend_amount_total, 2) != round(
                 order_id.amount_total, 2
             ):
-                order_id.import_state = "error_amount"
-            elif order_id.backend_picking_count != len(order_id.picking_ids):
-                order_id.import_state = "error_sync"
+                order_id.sync_state = "error_amount"
             else:
-                order_id.import_state = "done"
+                order_id.sync_state = "done"
 
-    import_state = fields.Selection(
+    sync_state = fields.Selection(
         [
             ("waiting", "Waiting"),
             ("error_sync", "Sync Error"),
@@ -62,7 +78,7 @@ class OdooSaleOrder(models.Model):
             ("done", "Done"),
         ],
         default="waiting",
-        compute=_compute_import_state,
+        compute=_compute_sync_state,
     )
 
     def name_get(self):
@@ -112,9 +128,22 @@ class SaleOrder(models.Model):
         string="Odoo Bindings",
     )
 
-    queue_job_ids = fields.Many2many(
+    active_job_ids = fields.Many2many(
         comodel_name="queue.job",
+        compute="_compute_active_job_ids",
     )
+
+    def _compute_active_job_ids(self):
+        for record in self:
+            if record.bind_ids:
+                record.active_job_ids = self.env["queue.job"].search(
+                    [
+                        ("state", "not in", ["cancelled", "done"]),
+                        ("func_string", "=like", str(record.bind_ids) + "%"),
+                    ]
+                )
+            else:
+                record.active_job_ids = False
 
     def action_confirm(self):
         res = super(SaleOrder, self).action_confirm()

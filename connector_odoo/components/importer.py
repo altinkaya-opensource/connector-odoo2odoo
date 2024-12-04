@@ -20,8 +20,9 @@ from odoo import _, fields
 from odoo.tools import frozendict
 
 from odoo.addons.component.core import AbstractComponent
-from odoo.addons.connector.exception import IDMissingInBackend
+from odoo.addons.connector.exception import IDMissingInBackend, RetryableJobError
 from odoo.addons.queue_job.exception import NothingToDoJob
+from psycopg2.extras import Json
 
 _logger = logging.getLogger(__name__)
 
@@ -154,6 +155,19 @@ class OdooImporter(AbstractComponent):
     #         data.update({"external_id": binding.external_id})
     #     return binding
 
+    def _link_queue_job(self, binding):
+        # Add relation between job and binding, so we can monitor the process
+        if binding and self.job_uuid:
+            job_id = self.env["queue.job"].search([("uuid", "=", self.job_uuid)])
+            if job_id:
+                job_id.write(
+                    {
+                        "odoo_binding_model_name": binding.odoo_id._name,
+                        "odoo_binding_id": binding.odoo_id.id,
+                    }
+                )
+                self.env.cr.commit()  # Commit in case of a failure in the next steps
+
     def _get_binding(self):
         return self.binder.to_internal(self.external_id)
 
@@ -193,6 +207,42 @@ class OdooImporter(AbstractComponent):
         binding.with_context(context).sudo().write(data)
         _logger.info("%d updated from Odoo %s", binding, self.external_id)
         return
+
+    def _translate_fields(self, binding):
+        """
+        Update translations for translatable fields with Odoo 16.0's new
+        update_field_translations method. `translated_fields` is a dictionary
+        that contains the translations for each field. Example:
+        {field_name: {lang: new_value}}
+        Also we need to check if the field has translate=True in the model.
+        """
+        if not (binding and self.odoo_record.get("translated_fields")):
+            return False
+
+        for field, translations in self.odoo_record["translated_fields"].items():
+            target_field = binding._fields.get(field)
+            if target_field and target_field.translate:
+                if target_field.type != "html":
+                    binding.update_field_translations(field, translations)
+                else:  # HTML field requires a different approach
+                    source_lang = self.backend_record.default_lang_id.code
+                    for lang, value in translations.items():
+                        if value:
+                            binding.odoo_id._cr.execute(
+                                f"""
+                                UPDATE "{binding.odoo_id._table}"
+                                SET "{field}" = NULLIF(
+                                    jsonb_strip_nulls(%s || COALESCE("{field}", '{{}}'::jsonb) || %s),
+                                    '{{}}'::jsonb)
+                                WHERE id = %s
+                            """,
+                                (
+                                    Json({source_lang: binding[field]}),
+                                    Json({lang: value}),
+                                    binding.odoo_id.id,
+                                ),
+                            )
+        return True
 
     def _commit(self):
         """Committing the current transaction will also execute compute methods.
@@ -239,15 +289,6 @@ class OdooImporter(AbstractComponent):
         Put here all processed that must be delayed with jobs
         """
         return True
-
-    def _get_binding_odoo_id_changed(self, binding):
-        # It is possible that OpenERP/Odoo deletes and creates records
-        # instead of editing the information.
-        #
-        # e.g. In OpenERP it happens with ir.translation.
-        #
-        # This method will get the binding if needed
-        return binding
 
     def set_lock(self, external_id):
         lock_name = "import({}, {}, {}, {})".format(
@@ -296,20 +337,8 @@ class OdooImporter(AbstractComponent):
             _logger.info("Already up-to-date")
             return _("Already up-to-date.")
 
-        if not binding:
-            binding = self._get_binding_odoo_id_changed(binding)
+        # self._link_queue_job(binding)
 
-        # Add relation between job and binding, so we can monitor the import
-        if binding and self.job_uuid:
-            job_id = self.env["queue.job"].search([("uuid", "=", self.job_uuid)])
-            if job_id:
-                job_id.write(
-                    {
-                        "odoo_binding_model_name": binding.odoo_id._name,
-                        "odoo_binding_id": binding.odoo_id.id,
-                    }
-                )
-                self.env.cr.commit()  # Commit in case of a failure in the next steps
         self._before_import()
 
         # import the missing linked resources
@@ -333,7 +362,17 @@ class OdooImporter(AbstractComponent):
                     self.external_id, e
                 )
             )
-            raise  # Todo: raise RetryableJobError
+            raise RetryableJobError(
+                "An error occurred while connecting the record {}: {}".format(
+                    self.external_id, e
+                ),
+                seconds=5,
+            )
+
+        _logger.info(
+            "Translating Fields ({}: {})".format(self.work.model_name, external_id)
+        )
+        self._translate_fields(binding)
 
         _logger.info("Binding ({}: {})".format(self.work.model_name, external_id))
         self.binder.bind(self.external_id, binding)

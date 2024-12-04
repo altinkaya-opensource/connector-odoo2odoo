@@ -16,3 +16,45 @@ class JobQueue(models.Model):
         help="The ID of the Odoo binding that this job is related to.",
         readonly=True,
     )
+
+    duplicate = fields.Boolean(
+        string="Duplicate",
+        help="If this job is a duplicate of another job, this field is True.",
+        readonly=True,
+        compute="_compute_duplicate",
+    )
+
+    def _compute_duplicate(self):
+        for record in self:
+            duplicate_job = self.search(
+                [
+                    ("func_string", "=", record.func_string),
+                    ("state", "in", ("pending", "enqueued", "started")),
+                    ("model_name", "=", record.model_name),
+                    ("model_name", "=like", "odoo.%"),
+                    ("channel", "=", record.channel),
+                    ("id", "!=", record.id),
+                ],
+                limit=1,
+            )
+            record.duplicate = bool(duplicate_job)
+        return True
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Override the create method to set the state of the duplicate jobs to "done".
+        """
+        res = super(JobQueue, self).create(vals_list)
+        for record in res:
+            if record.duplicate:
+                record.state = "done"
+                record.result = "Duplicate job automatically marked as done."
+
+    def run_next_job(self):
+        """
+        Run the next specific job.
+        """
+        self.ensure_one()
+        self.priority = 0
+        return True

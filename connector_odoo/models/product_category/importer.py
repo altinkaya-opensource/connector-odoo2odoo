@@ -49,26 +49,46 @@ class ProductCategoryImporter(Component):
         if parent := record["parent_id"]:
             self._import_dependency(parent[0], self.model, force=force)
 
+    def _get_public_category(self, record):
+        return self.env["product.public.category"].search(
+            [("origin_categ_id", "=", record.id)], limit=1
+        )
+
     def _after_import(self, binding, force=False):
         """Hook called at the end of the import"""
-        self._create_public_category(binding)
+        self._sync_public_category(binding)
         binding._parent_store_compute()
         return super()._after_import(binding, force)
 
-    def _create_public_category(self, binding):
+    def _translate_fields(self, binding):
+        """
+        Translate the public categories name of the binding manually.
+        """
+        res = super()._translate_fields(binding)
+        if res:
+            public_categ_id = self._get_public_category(binding.odoo_id)
+            translated_fields = self.odoo_record.get("translated_fields")
+            if public_categ_id and translated_fields:
+                for lang, val in translated_fields["name_translatable"].items():
+                    public_categ_id.with_context(lang=lang).write({"name": val})
+        return res
+
+    def _sync_public_category(self, binding):
         """Create a public category for the binding"""
         categ_id = binding.odoo_id
 
-        public_categ_id = self.env["product.public.category"].search(
-            [("origin_categ_id", "=", categ_id.id)]
-        )
+        public_categ_id = self._get_public_category(categ_id)
         parent_id = self.env["product.public.category"].search(
-            [("origin_categ_id", "=", categ_id.parent_id.id)]
+            [
+                ("origin_categ_id", "!=", False),
+                ("origin_categ_id", "=", categ_id.parent_id.id),
+            ],
+            limit=1,
         )
 
         vals = {
-            "name": categ_id.name,
-            "sequence": categ_id.sequence,
+            "name": self.odoo_record["name_translatable"],
+            "sequence": self.odoo_record["sequence"],
             "origin_categ_id": categ_id.id,
             "website_id": self.env.user.company_id.website_id.id,
             "parent_id": parent_id.id or False,
@@ -99,11 +119,13 @@ class ProductCategoryImportMapper(Component):
     _apply_on = "odoo.product.category"
 
     direct = [
+        ("name_translatable", "name_translatable"),
         ("name", "name"),
         ("sequence", "sequence"),
         ("is_published", "is_published"),
         ("pricelist_discount_scales", "pricelist_discount_scales"),
         ("show_in_pricelist", "show_in_pricelist"),
+        ("ecommerce_image", "ecommerce_image"),
     ]
 
     @mapping

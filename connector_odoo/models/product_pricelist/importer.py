@@ -41,17 +41,14 @@ class ProductPricelistImporter(Component):
     _inherit = "odoo.importer"
     _apply_on = ["odoo.product.pricelist"]
 
-    def _get_binding_with_data(self, binding):
-        """Return a binding with the data from the backend"""
-        if not binding:
-            binding = self.env["odoo.product.pricelist"].search(
-                [
-                    ("name", "=", self.odoo_record["name"]),
-                    ("currency_id.name", "=", self.odoo_record["currency_id"][1]),
-                ],
-                limit=1,
+    def _import_dependencies(self, force=False):
+        """Import the dependencies for the record"""
+        record = self.odoo_record
+
+        if alternate_pricelist_id := record.get("alternate_pricelist_id"):
+            self._import_dependency(
+                alternate_pricelist_id[0], "odoo.product.pricelist", force=force
             )
-        return binding
 
 
 class ProductPricelistImportMapper(Component):
@@ -64,26 +61,8 @@ class ProductPricelistImportMapper(Component):
         ("discount_policy", "discount_policy"),
         ("name", "name"),
         ("sequence", "sequence"),
+        ("allow_check_stock", "allow_check_stock"),
     ]
-
-    @only_create
-    @mapping
-    def odoo_id(self, record):
-        # multiple pricelist with the same name will be allowed and not
-        # duplicated
-        pricelist = self.env["product.pricelist"].search(
-            [
-                ("name", "=", record["name"]),
-                ("currency_id.name", "=", record["currency_id"][1]),
-            ],
-            limit=1,
-        )
-        if len(pricelist) == 1:
-            _logger.info(
-                "found pricelist %s for record %s" % (pricelist.name, record["name"])
-            )
-            return {"odoo_id": pricelist.id}
-        return {}
 
     @mapping
     def currency_id(self, record):
@@ -96,6 +75,15 @@ class ProductPricelistImportMapper(Component):
             )
             return {"currency_id": currency.id}
         raise MappingError("No currency found %s" % currency.name)
+
+    @mapping
+    def alternate_pricelist_id(self, record):
+        vals = {"alternate_pricelist_id": False}
+        if alternate_pricelist_id := record.get("alternate_pricelist_id"):
+            binder = self.binder_for("odoo.product.pricelist")
+            pricelist = binder.to_internal(alternate_pricelist_id[0], unwrap=True)
+            vals["alternate_pricelist_id"] = pricelist.id
+        return vals
 
     @mapping
     def company_id(self, record):
@@ -171,6 +159,18 @@ class ProductPricelistItemImportMapper(Component):
     ]
 
     @mapping
+    def price_type_currency_id(self, record):
+        vals = {"price_type_currency_id": 2}
+        try:
+            price_type = self.work.odoo_api.browse(
+                model="product.price.type", res_id=int(record["base"])
+            )
+            vals["price_type_currency_id"] = price_type["currency"][0]
+        except:
+            pass
+        return vals
+
+    @mapping
     def pricelist_id(self, record):
         binder = self.binder_for("odoo.product.pricelist")
         pricelist = binder.to_internal(record["pricelist_id"][0], unwrap=True)
@@ -221,7 +221,7 @@ class ProductPricelistItemImportMapper(Component):
 
     @mapping
     def product_tmpl_id(self, record):
-        if tmpl_id := record.get("base_pricelist_id"):
+        if tmpl_id := record.get("product_tmpl_id"):
             binder = self.binder_for("odoo.product.template")
             product = binder.to_internal(tmpl_id[0], unwrap=True)
             return {"product_tmpl_id": product.id}

@@ -24,11 +24,6 @@ class PartnerBatchImporter(Component):
 
     def run(self, domain=None, force=False):
         """Run the synchronization"""
-        # Todo: implement new partner sync
-        # exported_ids = self.model.search([("external_id", "!=", 0)]).mapped(
-        #     "external_id"
-        # )
-        # domain += [("id", "in", exported_ids)]
         external_ids = self.backend_adapter.search(domain)
         _logger.debug(
             "search for odoo partner %s returned %s items", domain, len(external_ids)
@@ -43,7 +38,6 @@ class PartnerImportMapper(Component):
     _apply_on = ["odoo.res.partner"]
 
     direct = [
-        ("active", "active"),
         ("name", "name"),
         ("street", "street"),
         ("street2", "street2"),
@@ -63,7 +57,19 @@ class PartnerImportMapper(Component):
         ("sale_warn_msg", "sale_warn_msg"),
         ("vat", "vat"),
         ("tax_office_name", "tax_office_name"),
+        ("website_privacy_level", "website_privacy_level"),
     ]
+
+    @mapping
+    def active(self, record):
+        active = record.get("active", False)
+        if not active and record.get("email"):
+            # If the partner is not active, check if there is a user with the same email
+            # set the partner as always active.
+            user = self.env["res.users"].search([("login", "=", record["email"])])
+            if user:
+                active = True
+        return {"active": active}
 
     @mapping
     def pricelist_id(self, record):
@@ -175,7 +181,7 @@ class PartnerImportMapper(Component):
     @mapping
     def property_account_receivable(self, record):
         vals = {"property_account_receivable_id": False}
-        if account_id := record.get("property_account_payable_id"):
+        if account_id := record.get("property_account_receivable_id"):
             binder = self.binder_for("odoo.account.account")
             local_account = binder.to_internal(account_id[0], unwrap=True)
             if local_account:
@@ -183,13 +189,33 @@ class PartnerImportMapper(Component):
         return vals
 
     @mapping
-    def property_account_receivable(self, record):
+    def property_account_payable(self, record):
         vals = {"property_account_payable_id": False}
-        if account_id := record.get("property_account_receivable_id"):
+        if account_id := record.get("property_account_payable_id"):
             binder = self.binder_for("odoo.account.account")
             local_account = binder.to_internal(account_id[0], unwrap=True)
             if local_account:
                 vals["property_account_payable_id"] = local_account.id
+        return vals
+
+    @mapping
+    def property_payment_term(self, record):
+        vals = {"property_payment_term_id": False}
+        if payment_term_id := record.get("property_payment_term_id"):
+            binder = self.binder_for("odoo.account.payment.term")
+            local_payment_term = binder.to_internal(payment_term_id[0], unwrap=True)
+            if local_payment_term:
+                vals["property_payment_term_id"] = local_payment_term.id
+        return vals
+
+    @mapping
+    def property_account_position(self, record):
+        vals = {"property_account_position_id": False}
+        if fiscal_position_id := record.get("property_account_position_id"):
+            binder = self.binder_for("odoo.account.fiscal.position")
+            local_position = binder.to_internal(fiscal_position_id[0], unwrap=True)
+            if local_position:
+                vals["property_account_position_id"] = local_position.id
         return vals
 
     @mapping
@@ -200,17 +226,17 @@ class PartnerImportMapper(Component):
             "source_id": False,
         }
         if utm_campaign_id := record.get("campaign_id"):
-            binder = self.binder_for("utm.campaign")
+            binder = self.binder_for("odoo.utm.campaign")
             local_campaign = binder.to_internal(utm_campaign_id[0], unwrap=True)
             if local_campaign:
                 vals["campaign_id"] = local_campaign.id
         if utm_medium_id := record.get("medium_id"):
-            binder = self.binder_for("utm.medium")
+            binder = self.binder_for("odoo.utm.medium")
             local_medium = binder.to_internal(utm_medium_id[0], unwrap=True)
             if local_medium:
                 vals["medium_id"] = local_medium.id
         if utm_source_id := record.get("source_id"):
-            binder = self.binder_for("utm.source")
+            binder = self.binder_for("odoo.utm.source")
             local_source = binder.to_internal(utm_source_id[0], unwrap=True)
             if local_source:
                 vals["source_id"] = local_source.id
@@ -251,6 +277,22 @@ class PartnerImporter(Component):
                 force=force,
             )
 
+        if payment_term_id := self.odoo_record["property_payment_term_id"]:
+            _logger.info("Importing payment term")
+            self._import_dependency(
+                payment_term_id[0],
+                "odoo.account.payment.term",
+                force=force,
+            )
+
+        if fiscal_position_id := self.odoo_record["property_account_position_id"]:
+            _logger.info("Importing fiscal position")
+            self._import_dependency(
+                fiscal_position_id[0],
+                "odoo.account.fiscal.position",
+                force=force,
+            )
+
         # Pricelist dependencies
         if property_pricelist := self.odoo_record["property_product_pricelist"]:
             _logger.info("Importing pricelist")
@@ -287,15 +329,21 @@ class PartnerImporter(Component):
 
         # Eğer no_reset_password=True olmazsa, kullanıcılar için şifre yenileme maili gider.
         ResUsers = self.env["res.users"].with_context(no_reset_password=True)
+
+        # Skip if email is not set
+        if not imported_partner.email:
+            return res
+
         user = ResUsers.search([("login", "=", imported_partner.email)], limit=1)
 
         # Eğer kullanıcı varsa, oluşturduğumuz partner'ın şirketiyle eşleştir.
-        if (
-            user
-            and imported_partner.odoo_id.commercial_partner_id
-            != imported_partner.odoo_id
-        ):
-            user.parent_id = imported_partner.odoo_id.commercial_partner_id
+        if user:
+            if (
+                imported_partner.odoo_id.commercial_partner_id
+                != imported_partner.odoo_id
+            ):
+                user.parent_id = imported_partner.odoo_id.commercial_partner_id
+            return res
         else:
             ResUsers.create(
                 {

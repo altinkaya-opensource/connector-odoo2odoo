@@ -56,14 +56,6 @@ class ProductTemplateAttributeLineMapper(Component):
     _inherit = "odoo.import.mapper"
     _apply_on = "odoo.product.template.attribute.line"
 
-    # Todo: altınkaya fields. check if needed
-    # direct = [
-    #     ("attr_type", "attr_type"),
-    #     ("attr_base_price", "attr_base_price"),
-    #     ("required", "required"),
-    #     ("use_in_pricing", "use_in_pricing"),
-    # ]
-
     def _get_product_tmpl_id(self, record):
         binder = self.binder_for("odoo.product.template")
         return binder.to_internal(record["product_tmpl_id"][0], unwrap=True).id
@@ -84,12 +76,12 @@ class ProductTemplateAttributeLineMapper(Component):
         return vals
 
     @mapping
-    def attribute_id(self, record):
-        return {"attribute_id": self._get_attribute_id(record)}
-
-    @mapping
     def attribute_value_id(self, record):
         return {"value_ids": [(6, 0, self._get_attribute_value_id(record))]}
+
+    @mapping
+    def attribute_id(self, record):
+        return {"attribute_id": self._get_attribute_id(record)}
 
     @only_create
     @mapping
@@ -100,3 +92,20 @@ class ProductTemplateAttributeLineMapper(Component):
     def active(self, record):
         # We don't have any active field in Odoo 12, just set it True
         return {"active": True}
+
+    @mapping
+    def default_value_id(self, record):
+        vals = {"default_value_id": False}
+        if record.get("default_value_id"):
+            binder = self.binder_for("odoo.product.attribute.value")
+            local_attribute_value_id = binder.to_internal(
+                record["default_value_id"][0], unwrap=True
+            )
+            if local_attribute_value_id:
+                vals["default_value_id"] = local_attribute_value_id.id
+            else:
+                ValidationError(
+                    "Attribute value %s is not imported yet"
+                    % record["default_value_id"]
+                )
+        return vals

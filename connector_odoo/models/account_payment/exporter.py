@@ -39,8 +39,14 @@ class AccountPaymentExportMapper(Component):
 
     @mapping
     def journal_id(self, record):
+        if record.currency_id.name == "USD":
+            journal_id = 41
+        elif record.currency_id.name == "EUR":
+            journal_id = 35
+        else:
+            journal_id = 37
         return {
-            "journal_id": 37,  # Sanal POS TL
+            "journal_id": journal_id,
         }
 
     @mapping
@@ -101,7 +107,7 @@ class OdooAccountPaymentExporter(Component):
             and exported_record["state"] == "draft"
             and self.binding.state == "posted"
         ):
-            self.binding.delayed_execute_method(
+            self.binding.execute_method(
                 self.backend_record,
                 "account.payment",
                 "post",

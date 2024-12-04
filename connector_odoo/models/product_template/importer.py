@@ -63,14 +63,12 @@ class ProductTemplateImportMapper(Component):
     @mapping
     def dimensions(self, record):
         binder = self.binder_for("odoo.uom.uom")
-        weight_uom = binder.to_internal(record["weight_uom_id"][0], unwrap=True)
-        volume_uom = binder.to_internal(record["volume_uom_id"][0], unwrap=True)
         return {
-            "dimensional_uom_id": binder.to_internal(
-                record["dimensional_uom_id"][0], unwrap=True
-            ).id
-            if record["dimensional_uom_id"]
-            else False,
+            "dimensional_uom_id": (
+                binder.to_internal(record["dimensional_uom_id"][0], unwrap=True).id
+                if record["dimensional_uom_id"]
+                else False
+            ),
             "product_length": record["product_length"],
             "product_width": record["product_width"],
             "product_height": record["product_height"],
@@ -78,8 +76,16 @@ class ProductTemplateImportMapper(Component):
             "weight": record["weight"],
             "product_volume": record["volume"],
             "volume": record["volume"],
-            "weight_uom_id": weight_uom.id,
-            "volume_uom_id": volume_uom.id,
+            "weight_uom_id": (
+                binder.to_internal(record["weight_uom_id"][0], unwrap=True).id
+                if record["weight_uom_id"]
+                else False
+            ),
+            "volume_uom_id": (
+                binder.to_internal(record["volume_uom_id"][0], unwrap=True).id
+                if record["volume_uom_id"]
+                else False
+            ),
         }
 
     @mapping
@@ -97,14 +103,18 @@ class ProductTemplateImportMapper(Component):
         return {"company_id": self.env.user.company_id.id}
 
     @mapping
+    def product_brand_id(self, record):
+        if product_brand_id := record.get("product_brand_id"):
+            binder = self.binder_for("odoo.product.brand")
+            brand = binder.to_internal(product_brand_id[0], unwrap=True)
+            return {"product_brand_id": brand.id}
+        return {"product_brand_id": False}
+
+    @mapping
     def uom_id(self, record):
         binder = self.binder_for("odoo.uom.uom")
         uom = binder.to_internal(record["uom_id"][0], unwrap=True)
         return {"uom_id": uom.id, "uom_po_id": uom.id}
-
-    # @mapping # Todo: we don't use pricing at template level
-    # def price(self, record):
-    #     return {"list_price": record.list_price}
 
     @mapping
     def default_code(self, record):
@@ -167,19 +177,19 @@ class ProductTemplateImportMapper(Component):
             vals["public_description"] = cleaner.clean_html(desc) or ""
         return vals
 
-    # @mapping
-    # def default_variant_id(self, record):
-    #     vals = {}
-    #     if default_variant_id := record.get("default_variant_id"):
-    #         binder = self.binder_for("odoo.product.product")
-    #         product = binder.to_internal(default_variant_id[0], unwrap=True)
-    #         if not product:
-    #             raise MappingError(
-    #                 "Can't find external product with odoo_id: %s."
-    #                 % default_variant_id[0]
-    #             )
-    #         vals["default_variant_id"] = product.id
-    #     return vals
+    @mapping
+    def default_variant_id(self, record):
+        vals = {}
+        if default_variant_id := record.get("default_variant_id"):
+            binder = self.binder_for("odoo.product.product")
+            product = binder.to_internal(default_variant_id[0], unwrap=True)
+            if not product:
+                raise MappingError(
+                    "Can't find external product with odoo_id: %s."
+                    % default_variant_id[0]
+                )
+            vals["default_variant_id"] = product.id
+        return vals
 
 
 class ProductTemplateImporter(Component):
@@ -199,13 +209,12 @@ class ProductTemplateImporter(Component):
             "odoo.product.category",
             force=force,
         )
-        # todo yibudak: check if this should be enabled
-        # if default_variant_id := self.odoo_record.get("default_variant_id"):
-        #     self._import_dependency(
-        #         default_variant_id[0],
-        #         "odoo.product.product",
-        #         force=force,
-        #     )
+        if self.odoo_record["product_brand_id"]:
+            self._import_dependency(
+                self.odoo_record["product_brand_id"][0],
+                "odoo.product.brand",
+                force=force,
+            )
 
         return super()._import_dependencies(force=force)
 
@@ -222,6 +231,7 @@ class ProductTemplateImporter(Component):
             self._import_attribute_lines(force=force)
             self._import_feature_lines(force=force)
             self._import_default_variant(imported_template, force=force)
+            self._import_product_accessories(imported_template, force=force)
         super(ProductTemplateImporter, self)._after_import(binding, force=force)
 
     def _import_attribute_lines(self, force=False):
@@ -262,25 +272,44 @@ class ProductTemplateImporter(Component):
                 }
             )
         else:
+            tmpl_id.write({"website_attachment_ids": False})
+        return True
+
+    def _import_product_accessories(self, tmpl_id, force=False):
+        if accessory_ids := self.odoo_record["accessory_product_ids"]:
+            for product_id in accessory_ids:
+                self._import_dependency(
+                    product_id,
+                    "odoo.product.product",
+                    force=force,
+                )
+            imported_accessories = self.env["odoo.product.product"].search(
+                [
+                    ("external_id", "in", accessory_ids),
+                    "|",
+                    ("active", "=", True),
+                    ("active", "=", False),
+                ]
+            )
             tmpl_id.write(
                 {
-                    "website_attachment_ids": False,
+                    "accessory_product_ids": [
+                        (6, 0, imported_accessories.mapped("odoo_id.id"))
+                    ],
                 }
             )
+        else:
+            tmpl_id.write({"accessory_product_ids": False})
         return True
 
     def _import_default_variant(self, tmpl_id, force=False):
         if default_variant_id := self.odoo_record["default_variant_id"]:
-            imported_variant = self.env["odoo.product.product"].search(
-                [
-                    ("external_id", "=", default_variant_id[0]),
-                ],
-                limit=1,
-            )
+            binder = self.binder_for("odoo.product.product")
+            imported_variant = binder.to_internal(default_variant_id[0], unwrap=True)
             if imported_variant:
                 tmpl_id.write(
                     {
-                        "default_variant_id": imported_variant.odoo_id.id,
+                        "default_variant_id": imported_variant.id,
                     }
                 )
             else:
@@ -298,3 +327,16 @@ class ProductTemplateImporter(Component):
     #                 self.backend_record, image_id, force=force
     #             )
     #     return True
+
+    def _translate_fields(self, binding):
+        """Inherited to map website description field from v12 to v16."""
+        translations = binding and self.odoo_record.get("translated_fields")
+        if translations:
+            sale_description = translations.pop("short_public_description", False)
+            translations["description_sale"] = sale_description
+            translations.pop("description", False)  # This is not translated in v12
+            # Also exclude the UOM fields from translations
+            translations.pop("volume_uom_name", False)
+            translations.pop("weight_uom_name", False)
+            translations.pop("uom_name", False)
+        return super(ProductTemplateImporter, self)._translate_fields(binding)

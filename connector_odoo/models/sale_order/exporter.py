@@ -66,6 +66,9 @@ class OdooSaleOrderExporter(Component):
             electronic_txs = binding.transaction_ids.filtered(
                 lambda t: t.provider_id.code == "garanti" and t.state == "done"
             )
+            credit_payment = binding.transaction_ids.filtered(
+                lambda txn: txn.provider_id.id == 19
+            )
             if electronic_txs:
                 for tx in electronic_txs:
                     self._export_dependency(tx, "odoo.payment.transaction")
@@ -84,6 +87,11 @@ class OdooSaleOrderExporter(Component):
                             "payment_term_id": 24,  # Kredi kartı ile tahsilat
                         },
                     )
+
+            elif credit_payment:
+                # Do nothing, keep mapped payment term
+                pass
+
             else:
                 self.backend_adapter.write(
                     self.external_id,
@@ -91,6 +99,12 @@ class OdooSaleOrderExporter(Component):
                         "payment_term_id": 23,  # Banka havalesi
                     },
                 )
+
+        execute_job = self.binding.odoo_id.active_job_ids.filtered(
+            lambda j: "execute_method" in j.func_string
+        )
+        if execute_job:
+            execute_job.run_next_job()
 
 
 class SaleOrderExportMapper(Component):
@@ -101,7 +115,10 @@ class SaleOrderExportMapper(Component):
     direct = [
         ("name", "name"),
         ("sale_deci", "sale_deci"),
+        ("sale_volume", "sale_volume"),
+        ("sale_weight", "sale_weight"),
         ("delivery_rating_success", "delivery_rating_success"),
+        ("access_token", "access_token"),
     ]
 
     # yigit: buraya artık gerek yok cunku sale.order.line'ı mapledik.
@@ -209,4 +226,14 @@ class SaleOrderExportMapper(Component):
         if record.source_id:
             binder = self.binder_for("odoo.utm.source")
             vals["source_id"] = binder.to_external(record.source_id, wrap=True)
+        return vals
+
+    @mapping
+    def fiscal_position_id(self, record):
+        vals = {"fiscal_position_id": False}
+        binder = self.binder_for("odoo.account.fiscal.position")
+        if record.fiscal_position_id:
+            vals["fiscal_position_id"] = binder.to_external(
+                record.fiscal_position_id, wrap=True
+            )
         return vals

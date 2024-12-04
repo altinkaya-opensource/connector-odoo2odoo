@@ -11,7 +11,6 @@ from odoo.exceptions import UserError
 # pylint: disable=W7950
 from odoo.addons.connector_odoo.components.odoo_api import OdooAPI
 
-# TODO : verify if needed
 IMPORT_DELTA_BUFFER = 30  # seconds
 
 _logger = logging.getLogger(__name__)
@@ -89,6 +88,11 @@ class OdooBackend(models.Model):
     )
     default_lang_id = fields.Many2one(
         comodel_name="res.lang", string="Default Language"
+    )
+    translation_lang_ids = fields.Many2many(
+        comodel_name="res.lang",
+        string="Translation Languages",
+        help="Languages to be used for translations",
     )
     export_backend_id = fields.Integer(
         string="Backend ID in the external system",
@@ -187,6 +191,9 @@ class OdooBackend(models.Model):
         )
         return lang
 
+    def get_translation_lang_codes(self):
+        return self.translation_lang_ids.mapped("code")
+
     def get_connection(self):
         self.ensure_one()
         return OdooAPI(
@@ -196,19 +203,9 @@ class OdooBackend(models.Model):
             password=self.password,
             timeout=self.timeout,
             uid=self.uid,
-            lang=self.get_default_language_code(),
+            default_lang=self.get_default_language_code(),
+            translation_langs=self.get_translation_lang_codes(),
         )
-
-    # def get_legacy_connection(self):
-    #     self.ensure_one()
-    #     protocol = "https" if self.protocol == "jsonrpc+ssl" else "http"
-    #     return LegacyOdooAPI(
-    #         url=f"{protocol}://{self.hostname}:{self.port}",
-    #         db=self.database,
-    #         password=self.password,
-    #         username=self.login,
-    #         language=self.get_default_language_code(),
-    #     )
 
     def button_check_connection(self):
         odoo_api = self.get_connection()
@@ -235,35 +232,36 @@ class OdooBackend(models.Model):
             yield work
 
     def synchronize_basedata(self):
-        self.ensure_one()
-        lang = self.get_default_language_code()
-        self = self.with_context(lang=lang)
-        try:
-            for backend in self:
-                for model_name in (
-                    "odoo.product.category",
-                    "odoo.uom.uom",
-                    "odoo.product.attribute.value",  # this gets attributes too
-                    "odoo.res.currency.rate",  # this gets currencies too
-                ):
-                    # import directly, do not delay because this
-                    # is a fast operation, a direct return is fine
-                    # and it is simpler to import them sequentially
-                    imported_ids = self.env[model_name].search([]).mapped("external_id")
-                    # bypass already imported records since this method is manually triggered
-                    self.env[model_name].with_context(lang=lang).delayed_import_batch(
-                        backend, [("id", "not in", imported_ids)]
-                    )
-            return True
-        except BaseException as e:
-            _logger.error(e, exc_info=True)
-            raise UserError(
-                _(
-                    "Check your configuration, we can't get the data. "
-                    "Here is the error:\n%s"
-                )
-                % e
-            ) from e
+        raise UserError(_("This method is deprecated."))
+        # self.ensure_one()
+        # lang = self.get_default_language_code()
+        # self = self.with_context(lang=lang)
+        # try:
+        #     for backend in self:
+        #         for model_name in (
+        #             "odoo.product.category",
+        #             "odoo.uom.uom",
+        #             "odoo.product.attribute.value",  # this gets attributes too
+        #             "odoo.res.currency.rate",  # this gets currencies too
+        #         ):
+        #             # import directly, do not delay because this
+        #             # is a fast operation, a direct return is fine
+        #             # and it is simpler to import them sequentially
+        #             imported_ids = self.env[model_name].search([]).mapped("external_id")
+        #             # bypass already imported records since this method is manually triggered
+        #             self.env[model_name].with_context(lang=lang).delayed_import_batch(
+        #                 backend, [("id", "not in", imported_ids)]
+        #             )
+        #     return True
+        # except BaseException as e:
+        #     _logger.error(e, exc_info=True)
+        #     raise UserError(
+        #         _(
+        #             "Check your configuration, we can't get the data. "
+        #             "Here is the error:\n%s"
+        #         )
+        #         % e
+        #     ) from e
 
     def _get_backends(self):
         """
@@ -330,6 +328,7 @@ class OdooBackend(models.Model):
             "odoo.account.tax",
             "odoo.account.fiscal.position",
             "odoo.account.payment.term",
+            "odoo.payment.provider.error",
         ]
         date_field = "import_account_from_date"
         return self._cron_multi_import(models=account_models, date_field=date_field)
@@ -351,6 +350,7 @@ class OdooBackend(models.Model):
             "odoo.product.attribute",
             "odoo.product.attribute.value",
             "odoo.res.partner",
+            "odoo.product.brand",
         ]
         date_field = "import_base_models_from_date"
         return self._cron_multi_import(models=base_models, date_field=date_field)

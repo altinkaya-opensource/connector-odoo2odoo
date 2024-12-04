@@ -8,7 +8,7 @@ from odoo.addons.component.core import Component
 
 
 class OdooProductAttribute(models.Model):
-    _queue_priority = 10
+    _queue_priority = 7
     _name = "odoo.product.attribute"
     _inherit = ["odoo.binding"]
     _inherits = {"product.attribute": "odoo_id"}
@@ -22,9 +22,7 @@ class OdooProductAttribute(models.Model):
     ]
 
     def resync(self):
-        return self.delayed_import_record(
-            self.backend_id, self.external_id, force=True
-        )
+        return self.delayed_import_record(self.backend_id, self.external_id, force=True)
 
 
 class ProductAttribute(models.Model):

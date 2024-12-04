@@ -37,7 +37,7 @@ class BatchPartnerExporter(Component):
             self.env["odoo.res.partner"].create(
                 {
                     "odoo_id": p.id,
-                    "external_id": 0,
+                    # "external_id": 0,
                     "backend_id": self.backend_record.id,
                 }
             )
@@ -60,11 +60,17 @@ class OdooPartnerExporter(Component):
 
     # Todo: remove matching functions
 
-    def _must_skip(self):
-        if not self.binding.ecommerce_partner:
-            return True
-        else:
-            return False
+    def _should_import(self):
+        """
+        Inherited to always override current record to external system.
+        """
+        return False
+
+    # def _must_skip(self):
+    #     if not self.binding.ecommerce_partner:
+    #         return True
+    #     else:
+    #         return False
 
     def _before_export(self):
         """Try to match parent partner from Odoo backend."""
@@ -74,13 +80,12 @@ class OdooPartnerExporter(Component):
         if self.binding.vat in ["1" * 11, "2" * 11]:
             return False
 
-        if self.binding.country_id.code != "TR":
-            return False
+        # if self.binding.country_id.code != "TR":
+        #     return False
 
         match_domain = [
             ("vat", "=", self.binding.vat),
             ("parent_id", "=", False),
-            ("ecommerce_partner", "=", False),
         ]
         matched_partner = self.backend_adapter.search(
             model="res.partner",
@@ -129,13 +134,12 @@ class OdooPartnerExporter(Component):
                 "Created company %s must have vat number" % created_company.name
             )
         # To avoid infinite loop
-        self.binding.external_id = 0
+        self.binding.external_id = False
         external_company = self.backend_adapter.search(
             model="res.partner",
             domain=[
                 ("vat", "=", created_company.vat),
                 ("parent_id", "=", False),
-                ("ecommerce_partner", "=", False),
             ],
             limit=1,
         )
@@ -162,8 +166,7 @@ class OdooPartnerExporter(Component):
             self.binding.parent_id = imported_partner.odoo_id
             # Bir şirketle eşleştirebildik, oluşturduğumuz dummy şirketi çöpe at.
             created_company.unlink()
-        else:
-            created_company.ecommerce_partner = True
+
         return True
 
     def _export_dependencies(self):
@@ -194,8 +197,8 @@ class OdooPartnerExporter(Component):
         if self.binding.vat in ["1" * 11, "2" * 11]:
             return False
 
-        if self.binding.country_id.code != "TR":
-            return False
+        # if self.binding.country_id.code != "TR":
+        #     return False
 
         domain = [
             ("vat", "=", self.binding.vat),
@@ -220,15 +223,23 @@ class PartnerExportMapper(Component):
         ("street2", "street2"),
         ("city", "city"),
         ("website", "website"),
-        ("lang", "lang"),
         ("phone", "phone"),
         ("mobile", "mobile"),
         ("email", "email"),
         ("vat", "vat"),
+        ("zip", "zip"),
         ("type", "type"),
         ("ecommerce_partner", "ecommerce_partner"),  # todo: remove this field
         ("tax_office_name", "tax_office_name"),
+        ("website_privacy_level", "website_privacy_level"),
     ]
+
+    @mapping
+    def lang(self, record):
+        if record.lang == "tr_TR":
+            return {"lang": record.lang}
+        else:
+            return {"lang": "en_US"}
 
     @mapping
     def name(self, record):
@@ -254,23 +265,22 @@ class PartnerExportMapper(Component):
             vals["parent_id"] = binder.to_external(record.parent_id, wrap=True)
         return vals
 
-    # todo: fix accounts and enable it
-    # @mapping
-    # def accounts(self, record):
-    #     vals = {
-    #         "property_account_receivable_id": False,
-    #         "property_account_payable_id": False,
-    #     }
-    #     binder = self.binder_for("odoo.account.account")
-    #     if record.property_account_receivable_id:
-    #         vals["property_account_receivable_id"] = binder.to_external(
-    #             record.property_account_receivable_id, wrap=True
-    #         )
-    #     if record.property_account_payable_id:
-    #         vals["property_account_payable_id"] = binder.to_external(
-    #             record.property_account_payable_id, wrap=True
-    #         )
-    #     return vals
+    @mapping
+    def accounts(self, record):
+        vals = {
+            "property_account_receivable_id": False,
+            "property_account_payable_id": False,
+        }
+        binder = self.binder_for("odoo.account.account")
+        if record.property_account_receivable_id:
+            vals["property_account_receivable_id"] = binder.to_external(
+                record.property_account_receivable_id, wrap=True
+            )
+        if record.property_account_payable_id:
+            vals["property_account_payable_id"] = binder.to_external(
+                record.property_account_payable_id, wrap=True
+            )
+        return vals
 
     @mapping
     def utm(self, record):
@@ -292,14 +302,34 @@ class PartnerExportMapper(Component):
 
     @mapping
     def pricelists(self, record):
-        vals = {"property_product_pricelist": False}
+        vals = {
+            "property_product_pricelist": False,
+            "website_pricelist_id": False,
+        }
+        binder = self.binder_for("odoo.product.pricelist")
         if record.property_product_pricelist:
-            binder = self.binder_for("odoo.product.pricelist")
             external_pricelist = binder.to_external(
                 record.property_product_pricelist, wrap=True
             )
             if external_pricelist:
                 vals["property_product_pricelist"] = external_pricelist
+        if record.website_pricelist_id:
+            external_website_pricelist = binder.to_external(
+                record.website_pricelist_id, wrap=True
+            )
+            if external_website_pricelist:
+                vals["website_pricelist_id"] = external_website_pricelist
+        return vals
+
+    @mapping
+    def fiscal_position(self, record):
+        vals = {"property_account_position_id": False}
+        binder = self.binder_for("odoo.account.fiscal.position")
+        if record.property_account_position_id:
+            vals["property_account_position_id"] = binder.to_external(
+                record.property_account_position_id, wrap=True
+            )
+        return vals
 
     @mapping
     def address_fields(self, record):

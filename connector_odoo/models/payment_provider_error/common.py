@@ -10,12 +10,12 @@ from odoo.addons.component.core import Component
 _logger = logging.getLogger(__name__)
 
 
-class OdooUTMSource(models.Model):
+class OdooPaymentProviderError(models.Model):
     _queue_priority = 10
-    _name = "odoo.utm.source"
+    _name = "odoo.payment.provider.error"
     _inherit = ["odoo.binding"]
-    _inherits = {"utm.source": "odoo_id"}
-    _description = "Odoo UTM Source"
+    _inherits = {"payment.provider.error": "odoo_id"}
+    _description = "Odoo Payment Provider Error"
     _sql_constraints = [
         (
             "external_id",
@@ -33,22 +33,22 @@ class OdooUTMSource(models.Model):
             )
 
 
-class UTMSource(models.Model):
-    _inherit = "utm.source"
+class PaymentProviderError(models.Model):
+    _inherit = "payment.provider.error"
 
     bind_ids = fields.One2many(
-        comodel_name="odoo.utm.source",
+        comodel_name="odoo.payment.provider.error",
         inverse_name="odoo_id",
         string="Odoo Bindings",
     )
 
 
-class UTMSourceAdapter(Component):
-    _name = "odoo.utm.source.adapter"
+class PaymentProviderErrorAdapter(Component):
+    _name = "odoo.payment.provider.error.adapter"
     _inherit = "odoo.adapter"
-    _apply_on = "odoo.utm.source"
+    _apply_on = "odoo.payment.provider.error"
 
-    _odoo_model = "utm.source"
+    _odoo_model = "payment.provider.error"
 
     # Set get_passive to True to get the passive records also.
     _get_passive = False

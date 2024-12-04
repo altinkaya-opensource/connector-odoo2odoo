@@ -152,14 +152,12 @@ class ProductImportMapper(Component):
     @mapping
     def dimensions(self, record):
         binder = self.binder_for("odoo.uom.uom")
-        weight_uom = binder.to_internal(record["weight_uom_id"][0], unwrap=True)
-        volume_uom = binder.to_internal(record["volume_uom_id"][0], unwrap=True)
         return {
-            "dimensional_uom_id": binder.to_internal(
-                record["dimensional_uom_id"][0], unwrap=True
-            ).id
-            if record["dimensional_uom_id"]
-            else False,
+            "dimensional_uom_id": (
+                binder.to_internal(record["dimensional_uom_id"][0], unwrap=True).id
+                if record["dimensional_uom_id"]
+                else False
+            ),
             "product_length": record["product_length"],
             "product_width": record["product_width"],
             "product_height": record["product_height"],
@@ -167,8 +165,16 @@ class ProductImportMapper(Component):
             "weight": record["weight"],
             "product_volume": record["volume"],
             "volume": record["volume"],
-            "weight_uom_id": weight_uom.id,
-            "volume_uom_id": volume_uom.id,
+            "weight_uom_id": (
+                binder.to_internal(record["weight_uom_id"][0], unwrap=True).id
+                if record["weight_uom_id"]
+                else False
+            ),
+            "volume_uom_id": (
+                binder.to_internal(record["volume_uom_id"][0], unwrap=True).id
+                if record["volume_uom_id"]
+                else False
+            ),
         }
 
     @mapping
@@ -269,3 +275,10 @@ class ProductImporter(Component):
                 )
 
         return super()._import_dependencies(force=force)
+
+    def _translate_fields(self, binding):
+        """Inherited to map website description field from v12 to v16."""
+        translations = binding and self.odoo_record.get("translated_fields")
+        if translations:
+            self.odoo_record["translated_fields"] = {}
+        return super(ProductImporter, self)._translate_fields(binding)

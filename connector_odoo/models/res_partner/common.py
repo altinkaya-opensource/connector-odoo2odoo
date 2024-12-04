@@ -13,7 +13,8 @@ _logger = logging.getLogger(__name__)
 
 
 class OdooPartner(models.Model):
-    _queue_priority = 5
+    _special_channel = "root.2"
+    _queue_priority = 3
     _name = "odoo.res.partner"
     _inherit = "odoo.binding"
     _inherits = {"res.partner": "odoo_id"}
@@ -38,7 +39,7 @@ class OdooPartner(models.Model):
         return result
 
     def resync(self):
-        return self.delayed_export_record(self.backend_id)
+        return self.delayed_import_record(self.backend_id, self.external_id, force=True)
 
 
 class Partner(models.Model):
@@ -55,6 +56,24 @@ class Partner(models.Model):
             if partner.bind_ids:
                 partner.bind_ids.unlink()
         return super(Partner, self).unlink()
+
+    def get_remote_risk_credit_limit(self):
+        res = {}
+        for partner in self:
+            context = {}
+            bindings = partner.bind_ids
+            if not bindings:
+                continue
+            binding = bindings[0]
+            with binding.backend_id.work_on("odoo.res.partner") as work:
+                adapter = work.component(usage="record.importer").backend_adapter
+                data = adapter.read(binding.external_id, context=context)
+                res[partner.id] = {
+                    "risk_currency_id": data.get("risk_currency_id", 0),
+                    "risk_total": data.get("risk_total", 0),
+                    "credit_limit": data.get("credit_limit", 0),
+                }
+        return res
 
 
 class PartnerAdapter(Component):

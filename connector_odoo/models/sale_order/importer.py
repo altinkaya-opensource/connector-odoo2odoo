@@ -55,7 +55,10 @@ class SaleOrderImportMapper(Component):
         ("state", "state"),
         ("order_state", "order_state"),
         ("sale_deci", "sale_deci"),
+        ("sale_weight", "sale_weight"),
+        ("sale_volume", "sale_volume"),
         ("client_order_ref", "client_order_ref"),
+        ("access_token", "access_token"),
     ]
 
     @mapping
@@ -114,6 +117,17 @@ class SaleOrderImportMapper(Component):
         }
 
     @mapping
+    def fiscal_position_id(self, record):
+        vals = {"fiscal_position_id": False}
+        if record["fiscal_position_id"]:
+            binder = self.binder_for("odoo.account.fiscal.position")
+            fiscal_position_id = binder.to_internal(
+                record["fiscal_position_id"][0], unwrap=True
+            )
+            vals["fiscal_position_id"] = fiscal_position_id.id
+        return vals
+
+    @mapping
     def user_id(self, record):
         if not record["user_id"]:
             return {"user_id": False}
@@ -128,17 +142,17 @@ class SaleOrderImportMapper(Component):
             "source_id": False,
         }
         if utm_campaign_id := record.get("campaign_id"):
-            binder = self.binder_for("utm.campaign")
+            binder = self.binder_for("odoo.utm.campaign")
             local_campaign = binder.to_internal(utm_campaign_id[0], unwrap=True)
             if local_campaign:
                 vals["campaign_id"] = local_campaign.id
         if utm_medium_id := record.get("medium_id"):
-            binder = self.binder_for("utm.medium")
+            binder = self.binder_for("odoo.utm.medium")
             local_medium = binder.to_internal(utm_medium_id[0], unwrap=True)
             if local_medium:
                 vals["medium_id"] = local_medium.id
         if utm_source_id := record.get("source_id"):
-            binder = self.binder_for("utm.source")
+            binder = self.binder_for("odoo.utm.source")
             local_source = binder.to_internal(utm_source_id[0], unwrap=True)
             if local_source:
                 vals["source_id"] = local_source.id
