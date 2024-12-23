@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8" ?>
+	<odoo>
+		<record id="view_odoo_backend_tree" model="ir.ui.view">
+			<field name="name">odoo.backend.tree</field>
+			<field name="model">odoo.backend</field>
+			<field name="arch" type="xml">
+				<tree>
+					<field name="name" />
+					<field name="version" />
+					<field name="hostname" />
+					<field name="port" />
+					<field name="database" />
+					<field name="state" /> </tree>
+			</field>
+		</record>
+		<record id="view_odoo_backend_form" model="ir.ui.view">
+			<field name="name">odoo.backend.form</field>
+			<field name="model">odoo.backend</field>
+			<field name="arch" type="xml">
+				<form string="Odoo Backend">
+					<header>
+						<button name="synchronize_basedata" type="object" class="oe_highlight" attrs="{'invisible':[('state', 'in', ['draft'])]}" string="Synchronize Base Datas" help="Synchronize UOM, Categories, etc..." />
+						<button name="button_check_connection" type="object" class="oe_highlight" string="Check Connection" attrs="{'invisible':[('state', 'not in', ['draft'])]}" />
+						<button name="button_reset_to_draft" type="object" string="Reset To draft Connection" attrs="{'invisible':[('state', 'in', ['draft'])]}" />
+						<field name="state" widget="statusbar" /> </header>
+					<sheet>
+						<div class="oe_button_box" name="button_box">
+							<field name="active" invisible="1" />
+							<widget name="web_ribbon" title="Archived" bg_color="bg-danger" attrs="{'invisible': [('active', '=', True)]}" /> </div>
+						<label for="name" />
+						<h1>
+						<field name="name" class="oe_inline" />
+					</h1>
+						<group>
+							<group>
+								<field name="hostname" />
+								<field name="version" />
+								<field name="protocol" />
+								<field name="port" />
+								<field name="timeout" />
+								<field name="default_lang_id" />
+								<field name="translation_lang_ids" widget="many2many_tags"/>
+                            </group>
+							<group>
+								<field name="database" />
+								<field name="login" />
+								<field name="password" password="1" />
+								<field name="uid" />
+								<field name="force" />
+								<field name="no_export" />
+                            </group>
+						</group>
+						<notebook>
+                            <page string="Dates" name="dates">
+                                <group class="col-8" string="Last Import Dates for Models">
+                                    <field name="import_base_models_from_date"/>
+                                    <field name="import_product_from_date"/>
+                                    <field name="import_product_template_from_date"/>
+                                    <field name="import_delivery_models_from_date"/>
+                                    <field name="import_address_models_from_date"/>
+                                    <field name="import_currency_rate_from_date"/>
+									<field name="import_base_multi_image_from_date" />
+                                    <field name="import_pricelist_from_date"/>
+                                    <field name="import_partner_from_date"/>
+                                    <field name="import_account_from_date"/>
+                                    <field name="import_mrp_models_from_date"/>
+									<field name="import_sale_order_from_date"/>
+									<field name="import_utm_models_from_date"/>
+                                </group>
+                            </page>
+							<page string="Domains" name="domains_page">
+								<group name="prod_import_export_options">
+									<group string="Product Domains">
+										<field name="external_product_domain_filter" string="Ext. Product Filter" />
+                                        <field name="external_product_template_domain_filter" string="Ext. Product Template Filter" />
+                                    </group>
+                                    <group string="BoM Domains">
+                                        <field name="external_bom_domain_filter" string="Ext. BoM Filter" />
+                                        <field name="external_bom_line_domain_filter" string="Ext. BoM Line Filter" />
+                                    </group>
+									<group string="Order and Partners">
+										<field name="external_res_partner_domain_filter" string="Ext. Partner Filter" />
+										<field name="external_sale_order_domain_filter" string="Ext. Sale Order Filter" />
+									</group>
+								</group>
+							</page>
+                            <page string="Helpers" name="helpers_page">
+								<h2><strong style="color:red;">AVOID USING THESE BUTTONS.</strong></h2>
+                                <group name="helper_group">
+                                    <button name="action_fix_category_seo_name" type="object" string="Fix category seo name" />
+                                    <button name="action_fix_product_seo_name" type="object" string="Fix product seo name" />
+									<button name="action_fix_address_models" type="object" string="Fix Address Models"/>
+								</group>
+                            </page>
+						</notebook>
+					</sheet>
+				</form>
+			</field>
+		</record>
+		<record id="action_odoo_backend" model="ir.actions.act_window">
+			<field name="name">Odoo Backends</field>
+			<field name="res_model">odoo.backend</field>
+			<field name="view_mode">tree,form</field>
+		</record>
+		<menuitem id="menu_odoo_root" name="Odoo" parent="connector.menu_connector_root" sequence="1" />
+		<menuitem id="menu_odoo_backends" name="Backends" parent="menu_odoo_root" action="action_odoo_backend" sequence="1" /> </odoo>
