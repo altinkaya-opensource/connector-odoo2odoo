@@ -100,7 +100,17 @@ class ProductImportMapper(Component):
         tmpl_id, ptav_list = _compute_attribute_line_vals(importer=self, record=record)
 
         if not (tmpl_id and ptav_list):
-            return {}
+            if not tmpl_id:  # Try to find the product template, it's essential
+                tmpl_binder = self.binder_for("odoo.product.template")
+                tmpl_id = tmpl_binder.to_internal(
+                    record["product_tmpl_id"][0], unwrap=True
+                )
+                if not tmpl_id:
+                    raise MappingError(
+                        "Product template not found for product %s."
+                        " Import product template first" % record["id"]
+                    )
+            return {"product_tmpl_id": tmpl_id.id}
 
         combination_indices = ptav_list._ids2str()
 
