@@ -7,6 +7,7 @@ import logging
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import mapping
 from odoo.addons.connector.exception import MappingError
+from lxml.html.clean import Cleaner
 
 _logger = logging.getLogger(__name__)
 
@@ -48,6 +49,17 @@ class ProductCategoryImporter(Component):
         # the root category has a 0 parent_id
         if parent := record["parent_id"]:
             self._import_dependency(parent[0], self.model, force=force)
+        if feature_icons := record["feature_icon_ids"]:
+            for feature_icon in feature_icons:
+                self._import_dependency(feature_icon, "odoo.feature.icon", force=force)
+
+        if catalog_attribute_lines := record["catalog_attribute_lines"]:
+            for table_attr_line in catalog_attribute_lines:
+                self._import_dependency(
+                    table_attr_line,
+                    "odoo.product.category.table.attribute.lines",
+                    force=force,
+                )
 
     def _get_public_category(self, record):
         return self.env["product.public.category"].search(
@@ -126,7 +138,62 @@ class ProductCategoryImportMapper(Component):
         ("pricelist_discount_scales", "pricelist_discount_scales"),
         ("show_in_pricelist", "show_in_pricelist"),
         ("ecommerce_image", "ecommerce_image"),
+        ("show_all_products", "show_all_products"),
+        ("show_in_catalog", "show_in_catalog"),
+        ("catalog_sequence", "catalog_sequence"),
+        ("pre_pdf_catalog", "pre_pdf_catalog"),
+        ("post_pdf_catalog", "post_pdf_catalog"),
+        ("catalog_main_image", "catalog_main_image"),
+        ("catalog_technical_drawing_image", "catalog_technical_drawing_image"),
     ]
+
+    @mapping
+    def feature_icon_ids(self, record):
+        vals = {"feature_icon_ids": False}
+        if feature_icons := record.get("feature_icon_ids"):
+            icon_ids = []
+            binder = self.binder_for("odoo.feature.icon")
+            for icon in feature_icons:
+                local_icon_id = binder.to_internal(icon, unwrap=True)
+                if not local_icon_id:
+                    raise MappingError(
+                        "The feature icon with Odoo id %s is not imported." % icon.id
+                    )
+                icon_ids.append(local_icon_id.id)
+
+            vals["feature_icon_ids"] = [(6, 0, icon_ids)]
+        return vals
+
+    @mapping
+    def catalog_attribute_lines(self, record):
+        vals = {"catalog_attribute_lines": False}
+        if table_attr_lines := record.get("catalog_attribute_lines"):
+            line_ids = []
+            binder = self.binder_for("odoo.product.category.table.attribute.lines")
+            for line in table_attr_lines:
+                local_line_id = binder.to_internal(line, unwrap=True)
+                if not local_line_id:
+                    raise MappingError(
+                        "The table attribute line with Odoo id %s is not imported."
+                        % line.id
+                    )
+                line_ids.append(local_line_id.id)
+
+            vals["catalog_attribute_lines"] = [(6, 0, line_ids)]
+        return vals
+
+    @mapping
+    def catalog_description(self, record):
+        """Sometimes user can edit HTML field with JS editor.
+        This may lead to add some old styles from the main instance.
+        So we are cleaning the HTML before importing it."""
+        vals = {
+            "catalog_description": False,
+        }
+        if desc := record["catalog_description"]:
+            cleaner = Cleaner(style=True, remove_unknown_tags=False)
+            vals["catalog_description"] = cleaner.clean_html(desc) or ""
+        return vals
 
     @mapping
     def parent_id(self, record):

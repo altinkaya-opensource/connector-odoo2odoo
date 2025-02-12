@@ -6,10 +6,10 @@
     "summary": """
         Base connector for Odoo To Odoo scenarios""",
     "version": "16.0.2.0.0",
-    "website": "https://github.com/yibudak/connector-odoo2odoo",
+    "website": "https://github.com/altinkaya-opensource/connector-odoo2odoo",
     "category": "Connector",
     "license": "AGPL-3",
-    "author": "Yigit Budak, Florent THOMAS (Mind And Go), Odoo Community Association (OCA)",
+    "author": "Ahmet Yigit Budak, Altinkaya Enclosures",
     "application": False,
     "installable": True,
     "external_dependencies": {"python": ["requests"], "bin": []},
@@ -25,6 +25,7 @@
         "altinkaya_ecommerce_sync",
         "delivery_integration_base",
         "altinkaya_mrp",
+        "altinkaya_product_catalog_website",
     ],
     "data": [
         "data/cron.xml",

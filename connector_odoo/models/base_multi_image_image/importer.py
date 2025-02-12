@@ -140,7 +140,11 @@ class BaseMultiImageImageImporter(Component):
     def _import_dependencies(self, force=False):
         """Import the dependencies for the record"""
         record = self.odoo_record
-        if record["owner_model"] not in ("product.template", "product.product"):
+        if record["owner_model"] not in (
+            "product.template",
+            "product.product",
+            "product.category",
+        ):
             raise Exception(
                 "The owner model of the image is not a product or a product template"
             )
