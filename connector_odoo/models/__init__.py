@@ -47,6 +47,9 @@ from . import utm_medium
 from . import utm_campaign
 from . import payment_provider_error
 from . import product_brand
+from . import feature_icon
+from . import product_category_table_attribute_lines
+from . import product_attribute_group
 
 # Disabled Models
 from . import purchase_order

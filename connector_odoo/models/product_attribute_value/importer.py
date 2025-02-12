@@ -5,17 +5,17 @@ import logging
 
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import mapping, only_create
+from lxml.html.clean import Cleaner
 
 _logger = logging.getLogger(__name__)
 
 
 class ProductAttributeValueBatchImporter(Component):
-
     _name = "odoo.product.attribute.value.batch.importer"
     _inherit = "odoo.delayed.batch.importer"
     _apply_on = ["odoo.product.attribute.value"]
 
-    def run(self, domain=None, force=False):
+    def run(self, domain=None, force=False):    
         """Run the synchronization"""
         external_ids = self.backend_adapter.search(domain)
         _logger.info(
@@ -85,3 +85,22 @@ class ProductAttributeValueMapper(Component):
         if value_id:
             vals["odoo_id"] = value_id.id
         return vals
+
+    @mapping
+    def html_description(self, record):
+        """Sometimes user can edit HTML field with JS editor.
+        This may lead to add some old styles from the main instance.
+        So we are cleaning the HTML before importing it."""
+        vals = {
+            "html_description": False,
+        }
+        if desc := record["html_description"]:
+            cleaner = Cleaner(style=True, remove_unknown_tags=False)
+            vals["html_description"] = cleaner.clean_html(desc) or ""
+        return vals
+
+    @mapping
+    def image(self, record):
+        vals = {"image": False}
+        if image := record.get("image"):
+            vals["image"] = image

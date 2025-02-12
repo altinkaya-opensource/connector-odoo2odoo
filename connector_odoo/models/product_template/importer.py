@@ -57,7 +57,8 @@ class ProductTemplateImportMapper(Component):
         ("qty_increment_step", "qty_increment_step"),
         ("set_product", "set_product"),
         ("sub_component", "sub_component"),
-        # ("public_description", "public_description"),
+        ("show_in_catalog", "show_in_catalog"),
+        ("technical_drawing_image", "technical_drawing_image"),
     ]
 
     @mapping
@@ -109,6 +110,23 @@ class ProductTemplateImportMapper(Component):
             brand = binder.to_internal(product_brand_id[0], unwrap=True)
             return {"product_brand_id": brand.id}
         return {"product_brand_id": False}
+
+    @mapping
+    def feature_icon_ids(self, record):
+        vals = {"feature_icon_ids": False}
+        if feature_icons := record.get("feature_icon_ids"):
+            icon_ids = []
+            binder = self.binder_for("odoo.feature.icon")
+            for icon in feature_icons:
+                local_icon_id = binder.to_internal(icon, unwrap=True)
+                if not local_icon_id:
+                    raise MappingError(
+                        "The feature icon with Odoo id %s is not imported." % icon.id
+                    )
+                icon_ids.append(local_icon_id.id)
+
+            vals["feature_icon_ids"] = [(6, 0, icon_ids)]
+        return vals
 
     @mapping
     def uom_id(self, record):
@@ -178,6 +196,19 @@ class ProductTemplateImportMapper(Component):
         return vals
 
     @mapping
+    def catalog_description(self, record):
+        """Sometimes user can edit HTML field with JS editor.
+        This may lead to add some old styles from the main instance.
+        So we are cleaning the HTML before importing it."""
+        vals = {
+            "catalog_description": False,
+        }
+        if desc := record["catalog_description"]:
+            cleaner = Cleaner(style=True, remove_unknown_tags=False)
+            vals["catalog_description"] = cleaner.clean_html(desc) or ""
+        return vals
+
+    @mapping
     def default_variant_id(self, record):
         vals = {}
         if default_variant_id := record.get("default_variant_id"):
@@ -215,6 +246,10 @@ class ProductTemplateImporter(Component):
                 "odoo.product.brand",
                 force=force,
             )
+
+        if feature_icons := record["feature_icon_ids"]:
+            for feature_icon in feature_icons:
+                self._import_dependency(feature_icon, "odoo.feature.icon", force=force)
 
         return super()._import_dependencies(force=force)
 
