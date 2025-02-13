@@ -247,7 +247,7 @@ class ProductTemplateImporter(Component):
                 force=force,
             )
 
-        if feature_icons := record["feature_icon_ids"]:
+        if feature_icons := self.odoo_record["feature_icon_ids"]:
             for feature_icon in feature_icons:
                 self._import_dependency(feature_icon, "odoo.feature.icon", force=force)
 
