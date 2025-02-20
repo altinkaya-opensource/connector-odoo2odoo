@@ -27,12 +27,6 @@ class OdooBinding(models.AbstractModel):
         ondelete="restrict",
     )
     external_id = fields.Integer(string="ID on Ext Odoo", required=False)
-    active_job_ids = fields.One2many(
-        "queue.job",
-        compute="_compute_active_job_ids",
-        store=False,
-    )
-
     _sql_constraints = [
         (
             "odoo_backend_odoo_uniq",
@@ -41,21 +35,6 @@ class OdooBinding(models.AbstractModel):
         )
     ]
 
-    def _compute_active_job_ids(self):
-        """
-        Add active job ids to the recordset.
-        """
-        for record in self:
-            if record.id and hasattr(record, "bind_ids"):
-                record.active_job_ids = self.env["queue.job"].search(
-                    [
-                        ("odoo_binding_model_name", "=", record._name),
-                        ("odoo_binding_id", "=", record.id),
-                        ("state", "!=", "done"),
-                    ]
-                )
-            else:
-                record.active_job_ids = False
 
     @property
     def _unique_channel_name(self):
@@ -204,7 +183,7 @@ class OdooBinding(models.AbstractModel):
 
     """
     EXECUTERS
-    
+
     Note: Executer methods have lower priority than importers and exporters.
     """
 
