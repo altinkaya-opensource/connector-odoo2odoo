@@ -196,30 +196,33 @@ class SaleOrderListener(Component):
     @skip_if(lambda self, record, **kwargs: self.no_connector_export(record))
     def on_sale_order_confirm(self, record):
         binding = record.bind_ids
-        binding.ensure_one()
-        binding.delayed_execute_method(
-            binding.backend_id,
-            "sale.order",
-            "action_confirm",
-            context={"bypass_risk": True},
-        )
+        if binding:
+            binding.ensure_one()
+            binding.delayed_execute_method(
+                binding.backend_id,
+                "sale.order",
+                "action_confirm",
+                context={"bypass_risk": True},
+            )
 
     @skip_if(lambda self, record, **kwargs: self.no_connector_export(record))
     def on_sale_order_cancel(self, record):
         binding = record.bind_ids
-        binding.ensure_one()
-        binding.delayed_execute_method(
-            binding.backend_id,
-            "sale.order",
-            "action_cancel",
-        )
+        if binding:
+            binding.ensure_one()
+            binding.delayed_execute_method(
+                binding.backend_id,
+                "sale.order",
+                "action_cancel",
+            )
 
     @skip_if(lambda self, record, **kwargs: self.no_connector_export(record))
     def on_sale_order_quotation_sent(self, record):
         binding = record.bind_ids
-        binding.ensure_one()
-        binding.delayed_execute_method(
-            binding.backend_id,
-            "sale.order",
-            "action_quotation_sent",
-        )
+        if binding:
+            binding.ensure_one()
+            binding.delayed_execute_method(
+                binding.backend_id,
+                "sale.order",
+                "action_quotation_sent",
+            )
