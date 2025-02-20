@@ -175,7 +175,7 @@ class ProductCategoryImportMapper(Component):
                 if not local_line_id:
                     raise MappingError(
                         "The table attribute line with Odoo id %s is not imported."
-                        % line.id
+                        % line
                     )
                 line_ids.append(local_line_id.id)
 

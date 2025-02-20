@@ -58,11 +58,6 @@ class ProductCategoryTableAttributeLinesImporter(Component):
     def _import_dependencies(self, force=False):
         """Import the dependencies for the record"""
         self._import_dependency(
-            self.odoo_record["category_id"][0],
-            "odoo.product.category",
-            force=force,
-        )
-        self._import_dependency(
             self.odoo_record["attribute_id"][0],
             "odoo.product.attribute",
             force=force,
