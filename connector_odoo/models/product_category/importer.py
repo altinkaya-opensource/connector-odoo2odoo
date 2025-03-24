@@ -196,6 +196,19 @@ class ProductCategoryImportMapper(Component):
         return vals
 
     @mapping
+    def description(self, record):
+        """Sometimes user can edit HTML field with JS editor.
+        This may lead to add some old styles from the main instance.
+        So we are cleaning the HTML before importing it."""
+        vals = {
+            "description": False,
+        }
+        if desc := record["description"]:
+            cleaner = Cleaner(style=True, remove_unknown_tags=False)
+            vals["description"] = cleaner.clean_html(desc) or ""
+        return vals
+
+    @mapping
     def parent_id(self, record):
         vals = {"parent_id": False, "odoo_parent_id": False}
         if not (parent := record.get("parent_id")):
