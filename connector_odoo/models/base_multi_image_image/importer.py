@@ -19,7 +19,13 @@ class BaseMultiImageImageBatchImporter(Component):
         """Run the synchronization"""
 
         # We only want to import images that are related to products.
-        domain += [["owner_model", "in", ("product.template", "product.product")]]
+        domain += [
+            [
+                "owner_model",
+                "in",
+                ("product.template", "product.product", "product.category"),
+            ]
+        ]
 
         external_ids = self.backend_adapter.search(
             domain, model="base_multi_image.image"
