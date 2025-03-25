@@ -45,6 +45,7 @@ class BaseMultiImageImageMapper(Component):
     _apply_on = ["odoo.base_multi_image.image"]
 
     direct = [
+        ("name", "name"),
         ("sequence", "sequence"),
         ("extension", "extension"),
         ("comments", "comments"),
@@ -56,21 +57,21 @@ class BaseMultiImageImageMapper(Component):
         owner = binder.to_internal(record["owner_id"])
         return owner
 
-    @mapping
-    def name(self, record):
-        # Avoid duplicate names
-        owner = self._get_owner(record)
-        name = record.get("name", owner.name)
-        if owner:
-            exist_images = self.env["base_multi_image.image"].search(
-                [
-                    ("owner_model", "=", owner.odoo_id._name),
-                    ("owner_id", "=", owner.odoo_id.id),
-                ]
-            )
-            if name in exist_images.mapped("name"):
-                name = "%s %s" % (name, record["id"])
-        return {"name": name}
+    # @mapping
+    # def name(self, record):
+    #     # Avoid duplicate names
+    #     owner = self._get_owner(record)
+    #     name = record.get("name", owner.name)
+    #     if owner:
+    #         exist_images = self.env["base_multi_image.image"].search(
+    #             [
+    #                 ("owner_model", "=", owner.odoo_id._name),
+    #                 ("owner_id", "=", owner.odoo_id.id),
+    #             ]
+    #         )
+    #         if name in exist_images.mapped("name"):
+    #             name = "%s %s" % (name, record["id"])
+    #     return {"name": name}
 
     @mapping
     def owner_ref_model(self, record):
