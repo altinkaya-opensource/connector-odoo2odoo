@@ -28,7 +28,6 @@ class AccountPaymentExportMapper(Component):
         ("ref", "ref"),
         ("payment_type", "payment_type"),
         ("partner_type", "partner_type"),
-        ("date", "date"),
     ]
 
     @mapping
@@ -61,6 +60,12 @@ class AccountPaymentExportMapper(Component):
         binder = self.binder_for("odoo.res.currency")
         return {
             "currency_id": binder.to_external(record.currency_id, wrap=True),
+        }
+
+    @mapping
+    def date(self, record):
+        return {
+            "date": record.date.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
         }
 
     @only_create
