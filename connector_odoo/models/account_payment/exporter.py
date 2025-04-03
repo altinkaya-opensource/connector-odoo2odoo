@@ -50,9 +50,9 @@ class AccountPaymentExportMapper(Component):
         }
 
     @mapping
-    def payment_method_id(self, record):
+    def payment_method_line_id(self, record):
         return {
-            "payment_method_id": 3,  # Elektronik
+            "payment_method_line_id": 127,  # Banka & Kredi Kartı
         }
 
     @mapping
