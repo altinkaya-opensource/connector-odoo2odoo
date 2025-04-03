@@ -33,10 +33,6 @@ class PaymentTransactionExportMapper(Component):
     ]
 
     @mapping
-    def type(self, record):
-        return {"type": "form"}
-
-    @mapping
     def provider_id(self, record):
         return {"provider_id": 43}  # Garanti Sanal POS
 
