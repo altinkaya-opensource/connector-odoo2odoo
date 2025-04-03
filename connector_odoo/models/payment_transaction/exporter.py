@@ -37,8 +37,8 @@ class PaymentTransactionExportMapper(Component):
         return {"type": "form"}
 
     @mapping
-    def acquirer_id(self, record):
-        return {"acquirer_id": 29}  # Garanti Sanal POS
+    def provider_id(self, record):
+        return {"provider_id": 43}  # Garanti Sanal POS
 
     @mapping
     def partner_id(self, record):
