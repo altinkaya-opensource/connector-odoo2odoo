@@ -70,7 +70,7 @@ class ProductProduct(models.Model):
                 backend=binding.backend_id,
                 model=self._name,
                 method="get_quantity_website",
-            )[0]
+            )
         return res
 
 
