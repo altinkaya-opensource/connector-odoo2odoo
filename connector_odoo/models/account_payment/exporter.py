@@ -33,8 +33,10 @@ class AccountPaymentExportMapper(Component):
     @mapping
     def partner_id(self, record):
         binder = self.binder_for("odoo.res.partner")
+        # # Always elevate to commercial partner
+        commercial_partner_id = record.partner_id.commercial_partner_id
         return {
-            "partner_id": binder.to_external(record.partner_id, wrap=True),
+            "partner_id": binder.to_external(commercial_partner_id, wrap=True),
         }
 
     @mapping
