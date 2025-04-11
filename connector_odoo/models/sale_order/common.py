@@ -170,7 +170,9 @@ class SaleOrderAdapter(Component):
     # Set get_passive to True to get the passive records also.
     _get_passive = True
 
-    def search(self, domain=None, model=None, offset=0, limit=None, order=None):
+    def search(
+        self, domain=None, model=None, offset=0, fields=None, limit=None, order=None
+    ):
         """Search records according to some criteria
         and returns a list of ids
 
@@ -183,7 +185,12 @@ class SaleOrderAdapter(Component):
         )
         domain += ext_filter or []
         return super(SaleOrderAdapter, self).search(
-            domain=domain, model=model, offset=offset, limit=limit, order=order
+            domain=domain,
+            model=model,
+            offset=offset,
+            fields=fields,
+            limit=limit,
+            order=order,
         )
 
 
