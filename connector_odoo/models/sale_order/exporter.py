@@ -16,6 +16,16 @@ class OdooSaleOrderExporter(Component):
     _inherit = "odoo.exporter"
     _apply_on = ["odoo.sale.order"]
 
+    def _must_skip(self):
+        if self.binding.external_id:
+            external_state = self.backend_adapter.read(
+                model="sale.order", res_id=self.binding.external_id
+            )["state"]
+            if external_state == "done":
+                return True
+        else:
+            return super()._must_skip()
+
     def _should_import(self):
         """Search for an existing reference on Odoo backend"""
         # This means that the exported sale order is deleted on Odoo backend.
