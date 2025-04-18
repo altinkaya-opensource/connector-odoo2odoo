@@ -30,6 +30,7 @@ class SaleOrderLineExportMapper(Component):
         ("is_delivery", "is_delivery"),
         ("volume", "volume"),
         ("weight", "weight"),
+        ("last_deci", "last_deci"),
     ]
 
     @mapping

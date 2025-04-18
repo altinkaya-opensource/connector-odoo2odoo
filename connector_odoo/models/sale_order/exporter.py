@@ -125,6 +125,7 @@ class SaleOrderExportMapper(Component):
     direct = [
         ("name", "name"),
         ("sale_deci", "sale_deci"),
+        ("sale_last_deci", "sale_last_deci"),
         ("sale_volume", "sale_volume"),
         ("sale_weight", "sale_weight"),
         ("delivery_rating_success", "delivery_rating_success"),
