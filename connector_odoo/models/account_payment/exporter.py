@@ -41,20 +41,14 @@ class AccountPaymentExportMapper(Component):
 
     @mapping
     def journal_id(self, record):
-        if record.currency_id.name == "USD":
-            journal_id = 41
-        elif record.currency_id.name == "EUR":
-            journal_id = 35
-        else:
-            journal_id = 37
         return {
-            "journal_id": journal_id,
+            "journal_id": 114, # Website Sanal Pos Ödemeleri
         }
 
     @mapping
     def payment_method_line_id(self, record):
         return {
-            "payment_method_line_id": 127,  # Banka & Kredi Kartı
+            "payment_method_line_id": 245,  # Website POS
         }
 
     @mapping
