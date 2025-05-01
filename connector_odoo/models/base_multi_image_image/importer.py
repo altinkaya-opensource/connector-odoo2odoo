@@ -47,9 +47,9 @@ class BaseMultiImageImageMapper(Component):
     direct = [
         ("name", "name"),
         ("sequence", "sequence"),
-        ("extension", "extension"),
         ("comments", "comments"),
         ("is_published", "is_published"),
+        ("image_1920", "image_1920"),
     ]
 
     def _get_owner(self, record):
@@ -86,35 +86,6 @@ class BaseMultiImageImageMapper(Component):
         return vals
 
     @mapping
-    def attachment_id(self, record):
-        vals = {}
-        if (attachment_id := record["attachment_id"]) and record["storage"] != "db":
-            binder = self.binder_for("odoo.ir.attachment")
-            local_attachment = binder.to_internal(attachment_id[0])
-            if not local_attachment:
-                external_attachment_id = self.work.odoo_api.browse(
-                    model="ir.attachment", res_id=attachment_id[0]
-                )
-
-                local_attachment = self.env["odoo.ir.attachment"].search(
-                    [("store_fname", "=", external_attachment_id["store_fname"])],
-                    limit=1,
-                )
-            vals["attachment_id"] = local_attachment.odoo_id.id
-        else:
-            vals["attachment_id"] = False
-        return vals
-
-    @mapping
-    def file_db_store(self, record):
-        vals = {}
-        if record["storage"] == "db" and record["file_db_store"]:
-            vals["file_db_store"] = record["file_db_store"].replace("\n", "")
-        else:
-            vals["file_db_store"] = False
-        return vals
-
-    @mapping
     def product_variant_ids(self, record):
         vals = {}
         if variant_ids := record["product_variant_ids"]:
@@ -128,16 +99,6 @@ class BaseMultiImageImageMapper(Component):
         else:
             vals["product_variant_ids"] = False
         return vals
-
-    @mapping
-    def storage(self, record):
-        """
-        Yigit: This is a hack to fix the constraint error when importing images
-        Actually we could import `storage` field with the `direct` mapping above
-        but this field needs to be imported after `attachment_id` field.
-        """
-        return {"storage": record["storage"]}
-
 
 class BaseMultiImageImageImporter(Component):
     _name = "odoo.base_multi_image.image.importer"
@@ -158,10 +119,3 @@ class BaseMultiImageImageImporter(Component):
         self._import_dependency(
             record["owner_id"], "odoo.%s" % record["owner_model"], force=force
         )
-        # We need to import the attachment as well.
-        if attachment := record["attachment_id"]:
-            self._import_dependency(
-                attachment[0],
-                "odoo.ir.attachment",
-                force=force,
-            )
