@@ -10,6 +10,9 @@ from . import res_currency_rate
 from . import res_currency
 from . import res_users
 from . import res_company
+from . import res_country
+from . import res_bank
+from . import res_partner_bank
 from . import partner_category
 from . import res_partner
 from . import product_category

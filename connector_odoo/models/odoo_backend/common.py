@@ -351,6 +351,9 @@ class OdooBackend(models.Model):
             "odoo.product.attribute",
             "odoo.product.attribute.value",
             "odoo.res.partner",
+            "odoo.res.bank",
+            "odoo.res.partner.bank",
+            "odoo.res.country",
             "odoo.product.brand",
         ]
         date_field = "import_base_models_from_date"
