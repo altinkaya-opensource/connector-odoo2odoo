@@ -144,8 +144,11 @@ class PartnerImportMapper(Component):
     @mapping
     def country_id(self, record):
         vals = {"country_id": False}
-        if country_id := record.get("country_id"):
-            vals["country_id"] = country_id[0]
+        binder = self.binder_for("odoo.res.country")
+        if country_id := record["country_id"]:
+            country_id = binder.to_internal(country_id[0], unwrap=True)
+            vals["country_id"] = country_id.id
+
         return vals
 
     @mapping
@@ -306,6 +309,14 @@ class PartnerImporter(Component):
             self._import_dependency(
                 website_pricelist[0],
                 "odoo.product.pricelist",
+                force=force,
+            )
+
+        if country_id := self.odoo_record["country_id"]:
+            _logger.info("Importing country")
+            self._import_dependency(
+                country_id[0],
+                "odoo.res.country",
                 force=force,
             )
 

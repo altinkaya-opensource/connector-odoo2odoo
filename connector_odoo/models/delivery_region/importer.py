@@ -47,17 +47,14 @@ class DeliveryRegionMapper(Component):
 
     @mapping
     def country_ids(self, record):
-        res = {"country_ids": False}
-        countries = record.get("country_ids")
-        if countries:
-            external_countries = self.work.odoo_api.search(
-                model="res.country", domain=[("id", "in", countries)]
-            )
-            local_countries = self.env["res.country"].search(
-                [("code", "in", [x["code"] for x in external_countries])]
-            )
-            res["country_ids"] = [(6, 0, local_countries.ids)]
-        return res
+        vals = {"country_ids": []}
+        binder = self.binder_for("odoo.res.country")
+        country_ids = []
+        for country_id in record["country_ids"]:
+            if local_country := binder.to_internal(country_id, unwrap=True):
+                country_ids.append(local_country.id)
+        vals.update({"country_ids": [(6, 0, country_ids)]})
+        return vals
 
     @mapping
     def state_ids(self, record):
@@ -85,3 +82,13 @@ class DeliveryRegionImporter(Component):
     _name = "odoo.delivery.region.importer"
     _inherit = "odoo.importer"
     _apply_on = ["odoo.delivery.region"]
+
+    def _import_dependencies(self, force=False):
+        """Import the dependencies for the record"""
+        super()._import_dependencies(force=force)
+        record = self.odoo_record
+        if country_ids := record.get("country_ids"):
+            for country_id in country_ids:
+                self._import_dependency(
+                    country_id, "odoo.res.country", force=force
+                )

@@ -250,7 +250,11 @@ class PartnerExportMapper(Component):
 
     @mapping
     def country_id(self, record):
-        return {"country_id": record.country_id.id}
+        vals = {"country_id": False}
+        if record.country_id:
+            binder = self.binder_for("odoo.res.country")
+            vals["country_id"] = binder.to_external(record.country_id, wrap=True)
+        return vals
 
     @mapping
     def customer(self, record):
