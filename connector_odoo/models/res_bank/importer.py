@@ -74,11 +74,13 @@ class ResBankMapper(Component):
 
     @mapping
     def country(self, record):
-        if not record.get("country"):
-            return {"country": False}
+        vals = {"country": False}
+        binder = self.binder_for("odoo.res.country")
+        if country := record["country"]:
+            country = binder.to_internal(country[0], unwrap=True)
+            vals["country"] = country.id
 
-        return {"country": record["country"][0]}
-
+        return vals
 
 class BankImporter(Component):
     """Import Odoo Bank"""
@@ -88,12 +90,6 @@ class BankImporter(Component):
     _apply_on = "odoo.res.bank"
 
     def _import_dependencies(self, force=False):
-        if state := self.odoo_record.get("state"):
-            self._import_dependency(
-                state[0],
-                "odoo.res.country.state",
-                force=force,
-            )
         if country := self.odoo_record.get("country"):
             self._import_dependency(
                 country[0],

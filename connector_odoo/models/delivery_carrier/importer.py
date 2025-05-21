@@ -82,7 +82,15 @@ class DeliveryCarrierMapper(Component):
     # @only_create
     @mapping
     def country_ids(self, record):
-        return {"country_ids": [(6, 0, record.get("country_ids", []))]}
+        vals = {"country_ids": []}
+        binder = self.binder_for("odoo.res.country")
+        country_ids = []
+        for country_id in record["country_ids"]:
+            local_country = binder.to_internal(country_id, unwrap=True)
+            if local_country:
+                country_ids.append(local_country.id)
+        vals.update({"country_ids": [(6, 0, country_ids)]})
+        return vals
 
     @mapping
     def product_id(self, record):
@@ -126,3 +134,9 @@ class DeliveryCarrierImporter(Component):
         record = self.odoo_record
         if product := record.get("product_id"):
             self._import_dependency(product[0], "odoo.product.product", force=force)
+
+        if country_ids := record.get("country_ids"):
+            for country_id in country_ids:
+                self._import_dependency(
+                    country_id[0], "odoo.res.country", force=force
+                )
