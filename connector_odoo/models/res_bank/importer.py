@@ -33,8 +33,8 @@ class ResBankMapper(Component):
     _apply_on = "odoo.res.bank"
 
     direct = [
-        ("fax", "fax"),
         ("name", "name"),
+        ("fax", "fax"),
         ("street", "street"),
         ("street2", "street2"),
         ("zip", "zip"),
@@ -75,10 +75,26 @@ class ResBankMapper(Component):
     @mapping
     def country(self, record):
         vals = {"country": False}
-        binder = self.binder_for("odoo.res.country")
-        if country := record["country"]:
-            country = binder.to_internal(country[0], unwrap=True)
-            vals["country"] = country.id
+
+        if not record.get("country"):
+            return vals
+        
+        remote_country = self.work.odoo_api.browse(
+            model="res.country", res_id=record["country"][0]
+        )
+
+        country_record = (
+            self.env["res.country"]
+            .search(
+                [
+                    ("code", "=", remote_country["code"]),
+                ],
+                limit=1,
+            )
+        )
+
+        if country_record:
+            vals.update({"country": country_record.id})
 
         return vals
 
@@ -88,13 +104,3 @@ class BankImporter(Component):
     _name = "odoo.res.bank.importer"
     _inherit = "odoo.importer"
     _apply_on = "odoo.res.bank"
-
-    def _import_dependencies(self, force=False):
-        if country := self.odoo_record.get("country"):
-            self._import_dependency(
-                country[0],
-                "odoo.res.country",
-                force=force,
-            )
-
-        return super()._import_dependencies(force=force)

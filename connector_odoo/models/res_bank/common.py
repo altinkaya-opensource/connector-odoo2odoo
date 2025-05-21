@@ -46,4 +46,4 @@ class ResBankAdapter(Component):
 
     _odoo_model = "res.bank"
 
-    _get_passive = False
+    _get_passive = True

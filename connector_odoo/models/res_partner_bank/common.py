@@ -46,4 +46,4 @@ class ResPartnerBankAdapter(Component):
 
     _odoo_model = "res.partner.bank"
 
-    _get_passive = False
+    _get_passive = True
