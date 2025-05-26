@@ -66,7 +66,9 @@ class PartnerImportMapper(Component):
         if not active and record.get("email"):
             # If the partner is not active, check if there is a user with the same email
             # set the partner as always active.
-            user = self.env["res.users"].search([("login", "=", record["email"])])
+            user = self.env["res.users"].search(
+                [("login", "=", record["email"].split(",")[0])], limit=1
+            )
             if user:
                 active = True
         return {"active": active}
