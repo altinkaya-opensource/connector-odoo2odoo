@@ -106,6 +106,6 @@ class OdooAccountPaymentExporter(Component):
             self.binding.execute_method(
                 self.backend_record,
                 "account.payment",
-                "post",
+                "action_post",
                 args=[self.binding.external_id],
             )
