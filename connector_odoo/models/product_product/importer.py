@@ -82,6 +82,7 @@ class ProductImportMapper(Component):
         ("type", "detailed_type"),
         ("is_published", "is_published"),
         ("public_description", "public_description"),
+        ("sale_qty360days", "sale_qty360days"),
     ]
 
     @mapping
