@@ -138,5 +138,5 @@ class DeliveryCarrierImporter(Component):
         if country_ids := record.get("country_ids"):
             for country_id in country_ids:
                 self._import_dependency(
-                    country_id[0], "odoo.res.country", force=force
+                    country_id, "odoo.res.country", force=force
                 )
