@@ -41,14 +41,14 @@ class ProductPricelistImporter(Component):
     _inherit = "odoo.importer"
     _apply_on = ["odoo.product.pricelist"]
 
-    def _import_dependencies(self, force=False):
-        """Import the dependencies for the record"""
-        record = self.odoo_record
+    # def _import_dependencies(self, force=False):
+    #     """Import the dependencies for the record"""
+    #     record = self.odoo_record
 
-        if alternate_pricelist_id := record.get("alternate_pricelist_id"):
-            self._import_dependency(
-                alternate_pricelist_id[0], "odoo.product.pricelist", force=force
-            )
+    #     if alternate_pricelist_id := record.get("alternate_pricelist_id"):
+    #         self._import_dependency(
+    #             alternate_pricelist_id[0], "odoo.product.pricelist", force=force
+    #         )
 
 
 class ProductPricelistImportMapper(Component):
