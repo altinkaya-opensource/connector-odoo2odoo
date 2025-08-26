@@ -76,13 +76,21 @@ class ProductImportMapper(Component):
         ("standard_price", "standard_price"),
         ("description_sale", "description_sale"),
         ("description_purchase", "description_purchase"),
-        ("description_sale", "description_sale"),
         ("sale_ok", "sale_ok"),
         ("purchase_ok", "purchase_ok"),
         ("type", "detailed_type"),
-        ("is_published", "is_published"),
         ("public_description", "public_description"),
         ("sale_qty360days", "sale_qty360days"),
+        ("state", "state"),
+        ("cnc_price", "cnc_price"),
+        ("print_price", "print_price"),
+        ("assembly_price", "assembly_price"),
+        ("paint_price", "paint_price"),
+        ("lasercut_price", "lasercut_price"),
+        ("laser_marking_price", "laser_marking_price"),
+        ("insert_installation_price", "insert_installation_price"),
+        ("total_customization_price", "total_customization_price"),
+        ("customization_prices_auto_update", "customization_prices_auto_update"),
     ]
 
     @mapping
@@ -231,6 +239,30 @@ class ProductImportMapper(Component):
         barcode = record.get("barcode") or record.get("ean13")
         return {"barcode": barcode}
 
+    @mapping
+    def sales_responsible_id(self, record):
+        vals = {
+            "sales_responsible_id": False,
+        }
+        if sales_responsible_id := record["sales_responsible_id"]:
+            user_id = sales_responsible_id[0]
+            binder = self.binder_for("odoo.res.users")
+            user = binder.to_internal(user_id, unwrap=True)
+            vals.update({"sales_responsible_id": user.id})
+        return vals
+
+    @mapping
+    def production_responsible_id(self, record):
+        vals = {
+            "production_responsible_id": False,
+        }
+        if production_responsible_id := record["production_responsible_id"]:
+            user_id = production_responsible_id[0]
+            binder = self.binder_for("odoo.res.users")
+            user = binder.to_internal(user_id, unwrap=True)
+            vals.update({"production_responsible_id": user.id})
+        return vals
+
 
 class ProductImporter(Component):
     _name = "odoo.product.product.importer"
@@ -285,7 +317,34 @@ class ProductImporter(Component):
                     attr_val_id, "odoo.product.attribute.value", force=force
                 )
 
+        if self.odoo_record["sales_responsible_id"]:
+            user_id = self.odoo_record["sales_responsible_id"][0]
+            self._import_dependency(user_id, "odoo.res.users", force=force)
+
+        if self.odoo_record["production_responsible_id"]:
+            user_id = self.odoo_record["production_responsible_id"][0]
+            self._import_dependency(user_id, "odoo.res.users", force=force)
+
         return super()._import_dependencies(force=force)
+
+    def _after_import(self, binding, force=False):
+        imported_template = self.binder.to_internal(self.external_id)
+        if imported_template:
+            for surface in self.odoo_record["surface_ids"]:
+                self.env["odoo.product.surface"].delayed_import_record(
+                    self.backend_record,
+                    surface,
+                    force=force,
+                )
+
+            for cli in self.odoo_record["customization_line_ids"]:
+                self.env["odoo.product.product.customization.line"].delayed_import_record(
+                    self.backend_record,
+                    cli,
+                    force=force,
+                )
+
+        super()._after_import(binding, force=force)
 
     def _translate_fields(self, binding):
         """Inherited to map website description field from v12 to v16."""

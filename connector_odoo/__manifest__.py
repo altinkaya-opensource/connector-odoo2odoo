@@ -26,6 +26,7 @@
         "delivery_integration_base",
         "altinkaya_mrp",
         "altinkaya_product_catalog_website",
+        "altinkaya_custom_production"
     ],
     "data": [
         "data/cron.xml",

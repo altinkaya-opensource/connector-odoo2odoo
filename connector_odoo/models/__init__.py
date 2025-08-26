@@ -19,6 +19,10 @@ from . import product_category
 from . import product_attribute
 from . import product_attribute_value
 from . import product_product
+from . import customization_department
+from . import product_surface
+from . import customization_process
+from . import product_product_customization_line
 from . import product_pricelist
 from . import product_template
 from . import product_image

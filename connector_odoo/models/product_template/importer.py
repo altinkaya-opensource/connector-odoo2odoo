@@ -26,7 +26,11 @@ class ProductTemplateBatchImporter(Component):
     def run(self, domain=None, force=False):
         """Run the synchronization"""
 
-        external_ids = self.backend_adapter.search(domain)
+        force = True
+
+        # TODO: SWITCH TO domain BEFORE PUSHING!!!!!!
+        # FOR TEST ONLY
+        external_ids = self.backend_adapter.search([("surface_ids", "!=", False)])
         _logger.info(
             "search for odoo products template %s returned %s items",
             domain,
@@ -267,6 +271,7 @@ class ProductTemplateImporter(Component):
             self._import_feature_lines(force=force)
             self._import_default_variant(imported_template, force=force)
             self._import_product_accessories(imported_template, force=force)
+            self._import_surfaces(force=force)
         super(ProductTemplateImporter, self)._after_import(binding, force=force)
 
     def _import_attribute_lines(self, force=False):
@@ -274,6 +279,15 @@ class ProductTemplateImporter(Component):
             self.env["odoo.product.template.attribute.line"].delayed_import_record(
                 self.backend_record,
                 attr_line,
+                force=force,
+            )
+        return True
+
+    def _import_surfaces(self, force=False):
+        for surface_line in self.odoo_record["surface_ids"]:
+            self.env["odoo.product.surface"].delayed_import_record(
+                self.backend_record,
+                surface_line,
                 force=force,
             )
         return True

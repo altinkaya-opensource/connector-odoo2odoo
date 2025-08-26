@@ -430,5 +430,6 @@ class OdooExporter(AbstractComponent):
             if "external_id" in record and record["external_id"]:
                 self.external_id = record["external_id"]
             else:
-                self.external_id = self._create(record)
+                data = self._create(record)
+                self.external_id = data
         return _("Record exported with ID %s on Odoo.") % self.external_id
