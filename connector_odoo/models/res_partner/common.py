@@ -75,6 +75,53 @@ class Partner(models.Model):
                 }
         return res
 
+    def get_remote_invoice_count(self):
+        res = {}
+        for partner in self:
+            bindings = partner.bind_ids
+            if not bindings:
+                continue
+            binding = bindings[0]
+            res[partner.id] = binding.execute_method(
+                backend=binding.backend_id,
+                model=self._name,
+                method="get_website_portal_invoice_count",
+            )
+        return res
+
+    def get_remote_invoice_data(
+        self, page=1, date_begin=None, date_end=None, sortby=None
+    ):
+        res = {}
+        for partner in self:
+            bindings = partner.bind_ids
+            if not bindings:
+                continue
+            binding = bindings[0]
+            res[partner.id] = binding.execute_method(
+                backend=binding.backend_id,
+                model=self._name,
+                method="get_website_portal_invoice",
+                args=[binding.external_id, page, date_begin, date_end, sortby],
+                context={"lang": self.env.lang},
+            )
+        return res
+
+    def get_remote_partner_statement_pdf(self, lang):
+        self.ensure_one()
+        bindings = self.bind_ids
+        if not bindings:
+            return False
+        binding = bindings[0]
+        res = binding.execute_method(
+            backend=binding.backend_id,
+            model=self._name,
+            method="get_website_partner_statement_pdf",
+            args=[binding.external_id, lang],
+            context={"lang": self.env.lang},
+        )
+        return res
+
 
 class PartnerAdapter(Component):
     _name = "odoo.res.partner.adapter"
