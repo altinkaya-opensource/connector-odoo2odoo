@@ -122,6 +122,21 @@ class Partner(models.Model):
         )
         return res
 
+    def get_remote_partner_balance_detailed(self):
+        self.ensure_one()
+        bindings = self.bind_ids
+        if not bindings:
+            return None
+        binding = bindings[0]
+        res = binding.execute_method(
+            backend=binding.backend_id,
+            model=self._name,
+            method="get_website_partner_balance_detailed",
+            args=[binding.external_id],
+            context={"lang": self.env.lang},
+        )
+        return res
+
 
 class PartnerAdapter(Component):
     _name = "odoo.res.partner.adapter"
