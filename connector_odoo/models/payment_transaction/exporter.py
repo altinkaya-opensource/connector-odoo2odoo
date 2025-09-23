@@ -37,9 +37,7 @@ class PaymentTransactionExportMapper(Component):
     @mapping
     def provider_id(self, record):
         return {
-            "provider_id": record.env.ref(
-                "payment_iyzico_altinkaya.payment_provider_iyzico"
-            ).id
+            "provider_id": 44 # iyzico
         }
 
     @mapping
