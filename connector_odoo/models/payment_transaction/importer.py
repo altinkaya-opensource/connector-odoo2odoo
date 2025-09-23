@@ -33,8 +33,10 @@ class PaymentTransactionMapper(Component):
     _apply_on = "odoo.payment.transaction"
 
     direct = [
-        ("garanti_xid", "garanti_xid"),
-        ("garanti_secure3d_hash", "garanti_secure3d_hash"),
+        # ("garanti_xid", "garanti_xid"),
+        # ("garanti_secure3d_hash", "garanti_secure3d_hash"),
+        ("provider_reference", "provider_reference"),
+        ("iyzico_installment_fee", "iyzico_installment_fee"),
         ("callback_hash", "callback_hash"),
         ("reference", "reference"),
         ("amount", "amount"),
