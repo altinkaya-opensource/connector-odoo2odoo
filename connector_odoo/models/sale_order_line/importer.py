@@ -117,4 +117,5 @@ class SaleOrderLineImporter(Component):
         ctx = super(SaleOrderLineImporter, self)._get_context()
         ctx["skip_procurement"] = True
         ctx["skip_price_recompute"] = True
+        ctx["connector_no_protect"] = True
         return ctx

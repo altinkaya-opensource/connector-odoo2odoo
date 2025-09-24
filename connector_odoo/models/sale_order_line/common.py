@@ -45,6 +45,11 @@ class SaleOrderLine(models.Model):
         string="Odoo Bindings",
     )
 
+    def _get_protected_fields(self):
+        if self.env.context.get("connector_no_protect"):
+            return []
+        return super()._get_protected_fields()
+
 
 class SaleOrderLineAdapter(Component):
     _name = "odoo.sale.order.line.adapter"
