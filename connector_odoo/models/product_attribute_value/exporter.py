@@ -32,3 +32,36 @@ class ProductAttributeValueExportMapper(Component):
         return {
             "attribute_id": binder.to_external(record.attribute_id, wrap=True),
         }
+
+
+class OdooProductAttributeValueExporter(Component):
+    _name = "odoo.product.attribute.value.exporter"
+    _inherit = "odoo.exporter"
+    _apply_on = ["odoo.product.attribute.value"]
+
+    def _should_import(self):
+        """Search for an existing reference on Odoo backend"""
+
+        # This means that the exported attribute is deleted on Odoo backend.
+        if self.binding.external_id and not bool(
+            self.backend_adapter.search(
+                model="product.attribute.value", domain=[("id", "=", self.external_id)]
+            )
+        ):
+            self.external_id = None
+            self.binding.write({"external_id": None})
+
+        # If it's exported but not binded, we should set external_id manually.
+        if not self.binding.external_id:
+            external_record = self.backend_adapter.search(
+                model="product.attribute.value",
+                domain=[
+                    ("name", "=", self.binding.name),
+                    ("attribute_id", "=", self.binding.attribute_id.bind_ids.external_id),
+                ],
+                limit=1,
+            )
+            if external_record:
+                self.external_id = external_record[0]
+
+        return super()._should_import()

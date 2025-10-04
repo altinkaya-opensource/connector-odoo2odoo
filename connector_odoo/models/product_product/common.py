@@ -46,7 +46,7 @@ class OdooProductProduct(models.Model):
             return exporter.run(self, fields)
 
     def resync(self):
-        return self.delayed_import_record(self.backend_id, self.external_id, force=True)
+        return self.delayed_import_record(self.backend_id, self.external_id)
 
 
 class ProductProduct(models.Model):

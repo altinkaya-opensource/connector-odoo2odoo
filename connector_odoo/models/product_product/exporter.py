@@ -21,7 +21,6 @@ class ProductProductExportMapper(Component):
     direct = [
         # Required fields
         ("name", "name"),
-        ("no_create_variants", "no_create_variants"),
         ("purchase_line_warn", "purchase_line_warn"),
         ("sale_line_warn", "sale_line_warn"),
         ("tracking", "tracking"),
@@ -33,12 +32,22 @@ class ProductProductExportMapper(Component):
         ("purchase_ok", "purchase_ok"),
     ]
 
-    @only_create
     @mapping
     def product_details(self, record):
+        image_data = record.image_1920
+
+
+        if image_data:
+            if isinstance(image_data, bytes):
+                image_base64 = image_data.decode("utf-8")
+            else:
+                image_base64 = image_data
+        else:
+            image_base64 = None
+
         return {
             "default_code": record.default_code or False,
-            "image_1920": record.image_1920 or False,
+            "image_1920": image_base64 or False,
             "state": record.state or False,
             "cnc_price": record.cnc_price or False,
             "print_price": record.print_price or False,
@@ -51,8 +60,6 @@ class ProductProductExportMapper(Component):
             "customization_prices_auto_update": record.customization_prices_auto_update
             or False,
         }
-
-    # product.product.customization.line
 
     @mapping
     def product_template_attribute_value_ids(self, record):
@@ -123,21 +130,19 @@ class OdooProductProductExporter(Component):
         if self.binding.v_cari_urun:
             self._export_dependency(self.binding.v_cari_urun, "odoo.res.partner")
 
-        for line in self.binding.product_tmpl_id.attribute_line_ids.filtered(
-            lambda al: al.attribute_id.custom_production
-        ):
-            for attr_val in line.value_ids:
-                self._export_dependency(attr_val, "odoo.product.attribute.value")
+        for line in self.binding.attribute_line_ids:
             self._export_dependency(line, "odoo.product.template.attribute.line")
 
-    def _after_export(self, binding, force):
-        if binding and binding.customization_line_ids:
-            for line in binding.customization_line_ids:
-                self.delayed_export_record(
-                    self.backend_record,
-                    line,
-                    force=force,
-                )
+        for ptav in self.binding.product_template_attribute_value_ids:
+            self._export_dependency(
+                ptav,
+                "odoo.product.template.attribute.value"
+            )
+            
+    def _after_export(self):
+        if self.binding and self.binding.customization_line_ids:
+            for line in self.binding.customization_line_ids:
+                self._export_dependency(line, "odoo.product.product.customization.line")
 
     def _create_data(self, map_record, fields=None, **kwargs):
         """Get the data to pass to :py:meth:`_create`"""

@@ -10,18 +10,14 @@ class ProductProductCustomizationLineExporter(Component):
 
     _name = "odoo.product.product.customization.line.exporter"
     _inherit = "odoo.exporter"
-    _apply_on = "product.product.customization.line"
-
-    def _export_dependencies(self):
-        if self.binding.product_id:
-            self._export_dependency(self.binding.product_id, "odoo.product.product")
+    _apply_on = "odoo.product.product.customization.line"
 
 class ProductProductCustomizationLineExportMapper(Component):
     """Map customization line fields for export"""
 
     _name = "odoo.product.product.customization.line.export.mapper"
     _inherit = "odoo.export.mapper"
-    _apply_on = "product.product.customization.line"
+    _apply_on = "odoo.product.product.customization.line"
 
     direct = [
         ("x", "x"),
@@ -33,7 +29,7 @@ class ProductProductCustomizationLineExportMapper(Component):
     @only_create
     @mapping
     def product_id(self, record):
-        binder = self.binder_for("product.product")
+        binder = self.binder_for("odoo.product.product")
         return {
             "product_id": binder.to_external(record.product_id, wrap=True),
         }
@@ -41,7 +37,7 @@ class ProductProductCustomizationLineExportMapper(Component):
     @only_create
     @mapping
     def surface_id(self, record):
-        binder = self.binder_for("product.surface")
+        binder = self.binder_for("odoo.product.surface")
         return {
             "surface_id": binder.to_external(record.surface_id, wrap=True),
         }
@@ -49,7 +45,7 @@ class ProductProductCustomizationLineExportMapper(Component):
     @only_create
     @mapping
     def customization_process_id(self, record):
-        binder = self.binder_for("customization.process")
+        binder = self.binder_for("odoo.customization.process")
         return {
             "customization_process_id": binder.to_external(record.customization_process_id, wrap=True),
         }

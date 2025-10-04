@@ -37,7 +37,7 @@ class BatchProductTemplateExporter(Component):
             self.env["odoo.product.template"].create(
                 {
                     "odoo_id": p.id,
-                    "external_id": 0,
+                    "external_id": None,
                     "backend_id": self.backend_record.id,
                 }
             )
@@ -71,7 +71,7 @@ class OdooProductTemplateExporter(Component):
             categ_id = self.env["odoo.product.category"].create(
                 {
                     "odoo_id": self.binding.categ_id.id,
-                    "external_id": 0,
+                    "external_id": None,
                     "backend_id": self.backend_record.id,
                 }
             )
