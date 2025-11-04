@@ -88,7 +88,7 @@ class MrpBomLineMapper(Component):
     @mapping
     def bom_product_template_attribute_value_ids(self, record):
         """
-        In Odoo 12 this field is related to bom_id.product_tmpl_id.attribute_line_ids
+        OUTDATED: In Odoo 12 this field is related to bom_id.product_tmpl_id.attribute_line_ids
         and in Odoo 16 this field is related to bom_id.product_tmpl_id.attribute_line_ids.product_template_value_ids
         That's why we need to map it manually.
         """
@@ -97,17 +97,17 @@ class MrpBomLineMapper(Component):
         attribute_value_binder = self.binder_for("odoo.product.attribute.value")
         bom_binder = self.binder_for("odoo.mrp.bom")
         attribute_ids = []
-        if attribute_value_ids := record.get("attribute_value_ids"):
+        if attribute_value_ids := record.get("bom_product_template_attribute_value_ids"):
             bom_id = bom_binder.to_internal(record["bom_id"][0], unwrap=True)
             for attr_val_id in attribute_value_ids:
                 external_attr_val = self.work.odoo_api.browse(
-                    model="product.attribute.value", res_id=attr_val_id
+                    model="product.template.attribute.value", res_id=attr_val_id
                 )
                 attribute_id = attribute_binder.to_internal(
                     external_attr_val["attribute_id"][0], unwrap=True
                 )
                 attribute_value_id = attribute_value_binder.to_internal(
-                    attr_val_id, unwrap=True
+                    external_attr_val["product_attribute_value_id"][0], unwrap=True
                 )
                 if not attribute_id or not attribute_value_id:
                     continue
