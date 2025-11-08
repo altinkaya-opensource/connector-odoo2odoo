@@ -26,8 +26,6 @@ class ProductTemplateBatchImporter(Component):
     def run(self, domain=None, force=False):
         """Run the synchronization"""
 
-        force = True
-
         external_ids = self.backend_adapter.search(domain)
         _logger.info(
             "search for odoo products template %s returned %s items",
