@@ -145,4 +145,30 @@
         <field name="model_id" ref="connector_odoo.model_odoo_backend"/>
     </record>
 
+    <record forcecreate="True" id="ir_cron_import_customization_process" model="ir.cron">
+        <field name="name">Odoo2Odoo - Sync Customization Process</field>
+        <field name="active" eval="True"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_multi_import(["odoo.customization.process"], "import_customization_process_from_date")</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="doall" eval="False"/>
+        <field name="model_id" ref="connector_odoo.model_odoo_backend"/>
+    </record>
+
+    <record forcecreate="True" id="ir_cron_import_customization_department" model="ir.cron">
+        <field name="name">Odoo2Odoo - Sync Customization Department</field>
+        <field name="active" eval="True"/>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_multi_import(["odoo.customization.department"], "import_customization_department_from_date")</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="doall" eval="False"/>
+        <field name="model_id" ref="connector_odoo.model_odoo_backend"/>
+    </record>
+
 </odoo>

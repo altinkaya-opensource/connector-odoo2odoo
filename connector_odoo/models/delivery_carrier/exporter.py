@@ -32,7 +32,7 @@ class BatchUserExporter(Component):
             self.env["odoo.delivery.carrier"].create(
                 {
                     "odoo_id": p.id,
-                    "external_id": 0,
+                    "external_id": None,
                     "backend_id": self.backend_record.id,
                 }
             )

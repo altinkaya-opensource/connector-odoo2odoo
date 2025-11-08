@@ -27,7 +27,7 @@ class OdooPurchaseOrderExporter(Component):
             partner = self.env["odoo.res.partner"].create(
                 {
                     "odoo_id": record_partner.id,
-                    "external_id": 0,
+                    "external_id": None,
                     "backend_id": self.backend_record.id,
                 }
             )

@@ -172,6 +172,8 @@ class OdooBackend(models.Model):
     import_mrp_models_from_date = fields.Datetime("Import MRP models from date")
     import_sale_order_from_date = fields.Datetime("Import Sale Order from date")
     import_utm_models_from_date = fields.Datetime("Import UTM models from date")
+    import_customization_process_from_date = fields.Datetime("Import customization process from date")
+    import_customization_department_from_date = fields.Datetime("Import customization department from date")
 
     @api.onchange("login")
     def _onchange_login(self):
