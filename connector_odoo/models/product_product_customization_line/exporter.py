@@ -24,9 +24,9 @@ class ProductProductCustomizationLineExportMapper(Component):
         ("y", "y"),
         ("quantity", "quantity"),
         ("total_price", "total_price"),
+        ("active", "active"),
     ]
 
-    @only_create
     @mapping
     def product_id(self, record):
         binder = self.binder_for("odoo.product.product")
@@ -34,7 +34,6 @@ class ProductProductCustomizationLineExportMapper(Component):
             "product_id": binder.to_external(record.product_id, wrap=True),
         }
 
-    @only_create
     @mapping
     def surface_id(self, record):
         binder = self.binder_for("odoo.product.surface")
@@ -42,7 +41,6 @@ class ProductProductCustomizationLineExportMapper(Component):
             "surface_id": binder.to_external(record.surface_id, wrap=True),
         }
 
-    @only_create
     @mapping
     def customization_process_id(self, record):
         binder = self.binder_for("odoo.customization.process")

@@ -32,6 +32,8 @@ class CustomizationProcessMapper(Component):
 
     direct = [
         ("name", "name"),
+        ("factor_a", "factor_a"),
+        ("factor_b", "factor_b"),
         ("x_name", "x_name"),
         ("y_name", "y_name"),
         ("formula", "formula"),

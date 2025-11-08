@@ -53,4 +53,4 @@ class OdooProductProductCustomizationLineAdapter(Component):
     _odoo_model = "product.product.customization.line"
 
     # Set get_passive to True to get the passive records also.
-    _get_passive = False
+    _get_passive = True

@@ -48,7 +48,8 @@ class ProductProductCustomizationLineMapper(Component):
         ("x", "x"),
         ("y", "y"),
         ("quantity", "quantity"),
-        ("total_price", "total_price")
+        ("total_price", "total_price"),
+        ("active", "active"),
     ]
 
     @mapping

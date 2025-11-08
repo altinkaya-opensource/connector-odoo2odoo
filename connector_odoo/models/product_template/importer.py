@@ -28,9 +28,7 @@ class ProductTemplateBatchImporter(Component):
 
         force = True
 
-        # TODO: SWITCH TO domain BEFORE PUSHING!!!!!!
-        # FOR TEST ONLY
-        external_ids = self.backend_adapter.search([("surface_ids", "!=", False)])
+        external_ids = self.backend_adapter.search(domain)
         _logger.info(
             "search for odoo products template %s returned %s items",
             domain,
