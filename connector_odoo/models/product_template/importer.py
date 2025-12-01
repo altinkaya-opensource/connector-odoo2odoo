@@ -59,6 +59,7 @@ class ProductTemplateImportMapper(Component):
         ("sub_component", "sub_component"),
         ("show_in_catalog", "show_in_catalog"),
         ("technical_drawing_image", "technical_drawing_image"),
+        ("search_keywords", "search_keywords"),
     ]
 
     @mapping
