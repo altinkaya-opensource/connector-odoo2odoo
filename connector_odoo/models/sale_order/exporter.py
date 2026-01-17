@@ -143,9 +143,12 @@ class SaleOrderExportMapper(Component):
         return {"state": "draft"}
 
     @mapping
-    def date_order(self, record):
+    def date_fields(self, record):
         return {
-            "date_order": record.date_order.strftime(DEFAULT_SERVER_DATETIME_FORMAT)
+            "date_order": record.date_order.strftime(DEFAULT_SERVER_DATETIME_FORMAT),
+            "validity_date": record.validity_date.strftime(
+                DEFAULT_SERVER_DATETIME_FORMAT
+            ),
         }
 
     @mapping
