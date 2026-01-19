@@ -1,16 +1,17 @@
 # Copyright 2023 Yiğit Budak (https://github.com/yibudak)
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl)
-from odoo.addons.connector.exception import IDMissingInBackend, RetryableJobError
-from random import randint
-import requests
+import base64
 import logging
-import time
+from random import randint
 
+import requests
+
+from odoo.addons.connector.exception import IDMissingInBackend, RetryableJobError
 
 _logger = logging.getLogger(__name__)
 
 
-class OdooAPI(object):
+class OdooAPI:
     """
     Yet another Odoo API client with JSON-RPC.
     """
@@ -39,7 +40,7 @@ class OdooAPI(object):
             _logger.error("OdooAPI: Authentication failed. Username: %s", self.login)
 
     def __repr__(self):
-        return "<OdooAPI {}>".format(self.base_url)
+        return f"<OdooAPI {self.base_url}>"
 
     @property
     def query_id(self):
@@ -60,7 +61,7 @@ class OdooAPI(object):
         except Exception as exc:
             _logger.error(exc)
             raise RetryableJobError(
-                "OdooAPI: Connection error: {}".format(exc),
+                f"OdooAPI: Connection error: {exc}",
                 seconds=5,
             )
 
@@ -125,6 +126,36 @@ class OdooAPI(object):
                 method="login",
             )
         )
+
+    def _web_login(self):
+        """
+        Authenticate via web session endpoint to establish a session cookie.
+
+        This is required for downloading attachments via /web/content/ URLs,
+        as JSON-RPC authentication doesn't establish a web session.
+        """
+        url = f"{self.base_url}/web/session/authenticate"
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "call",
+            "params": {
+                "db": self.db,
+                "login": self.login,
+                "password": self.password,
+            },
+            "id": self.query_id,
+        }
+        try:
+            response = self._session.post(url, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+            result = response.json()
+            if result.get("error"):
+                _logger.error("Web login failed: %s", result["error"])
+                return False
+            return result.get("result", {}).get("uid")
+        except requests.exceptions.RequestException as exc:
+            _logger.error("Web login request failed: %s", exc)
+            return False
 
     def test_connection(self):
         response = self._post(
@@ -221,7 +252,7 @@ class OdooAPI(object):
         ):
             return res[0]
         else:
-            raise IDMissingInBackend("ID {} not found in backend".format(res_id))
+            raise IDMissingInBackend(f"ID {res_id} not found in backend")
 
     def unlink(self, res_id):
         raise NotImplementedError
@@ -239,3 +270,67 @@ class OdooAPI(object):
                 ],
             )
         )
+
+    def download_attachment(self, download_path, timeout=300):
+        """
+        Download attachment binary data via HTTP streaming.
+
+        Uses the attachment's download path to stream large files
+        without JSON-RPC overhead.
+
+        :param download_path: The download path for the attachment
+                              (e.g., /web/content/ir.attachment/123/datas)
+        :param timeout: Timeout in seconds for the download (default: 300)
+        :return: base64 encoded binary data as string, or False if download fails
+        """
+        # Ensure we have a valid web session
+        if not self._web_login():
+            raise RetryableJobError(
+                f"Download attachment {download_path} failed: web login failed",
+                seconds=10,
+            )
+
+        url = f"{self.base_url}{download_path}"
+
+        try:
+            response = self._session.get(
+                url,
+                stream=True,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+
+            # Check if redirected to login page (session expired)
+            if "text/html" in response.headers.get("Content-Type", ""):
+                _logger.warning(
+                    "Download attachment %s: session expired, re-authenticating",
+                    download_path,
+                )
+                if not self._web_login():
+                    raise RetryableJobError(
+                        f"Download attachment {download_path} failed: "
+                        "re-authentication failed",
+                        seconds=10,
+                    )
+                response = self._session.get(
+                    url,
+                    stream=True,
+                    timeout=timeout,
+                )
+                response.raise_for_status()
+
+            # Stream content in chunks
+            chunks = []
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    chunks.append(chunk)
+
+            binary_data = b"".join(chunks)
+            return base64.b64encode(binary_data).decode("ascii")
+
+        except requests.exceptions.RequestException as exc:
+            _logger.error("Download attachment %s failed: %s", download_path, exc)
+            raise RetryableJobError(
+                f"Download attachment {download_path} failed: {exc}",
+                seconds=10,
+            ) from exc

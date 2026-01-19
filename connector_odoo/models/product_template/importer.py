@@ -4,10 +4,11 @@
 
 import logging
 
+from lxml.html.clean import Cleaner
+
 from odoo.addons.component.core import Component
 from odoo.addons.connector.components.mapper import mapping
 from odoo.addons.connector.exception import MappingError
-from lxml.html.clean import Cleaner
 
 _logger = logging.getLogger(__name__)
 
@@ -301,7 +302,7 @@ class ProductTemplateImporter(Component):
     def _import_website_attachments(self, tmpl_id, force=False):
         if attachment_ids := self.odoo_record["website_attachment_ids"]:
             for attachment_id in attachment_ids:
-                self.env["odoo.ir.attachment"].delayed_import_record(
+                self.env["odoo.ir.attachment"].import_record(
                     self.backend_record, attachment_id, force=force
                 )
             imported_attachments = self.env["odoo.ir.attachment"].search(

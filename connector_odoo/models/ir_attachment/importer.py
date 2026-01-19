@@ -36,14 +36,13 @@ class IrAttachmentImportMapper(Component):
     _apply_on = ["odoo.ir.attachment"]
 
     direct = [
-        ("datas", "datas"),
-        ("db_datas", "db_datas"),
+        # ("datas", "datas"),
+        # ("db_datas", "db_datas"),
         ("name", "name"),
         ("description", "description"),
         ("type", "type"),
         ("res_model", "res_model"),
         ("res_name", "res_name"),
-        ("store_fname", "store_fname"),
         ("file_size", "file_size"),
         ("index_content", "index_content"),
         ("usage", "usage"),
@@ -69,10 +68,27 @@ class IrAttachmentImportMapper(Component):
     def res_id(self, record):
         vals = {"res_id": False}
         if model := record["res_model"]:
-            binder = self.binder_for("odoo.{}".format(model))
+            binder = self.binder_for(f"odoo.{model}")
             res_id = binder.to_internal(record["res_id"], unwrap=True)
             vals.update({"res_id": res_id})
         return vals
+
+    @mapping
+    def datas(self, record):
+        """Download attachment binary data via HTTP streaming."""
+        if record.get("type") == "url":
+            # URL-type attachments don't have binary data
+            return {}
+
+        download_path = "/web/content/ir.attachment/{}/datas?download=true".format(
+            record["id"]
+        )
+        odoo_api = self.backend_record.get_connection()
+        datas = odoo_api.download_attachment(download_path)
+        if datas:
+            return {"datas": datas}
+
+        return {}
 
 
 class IrAttachmentImporter(Component):
