@@ -247,6 +247,21 @@ class PartnerImportMapper(Component):
                 vals["source_id"] = local_source.id
         return vals
 
+    @mapping
+    def extra_carrier_ids(self, record):
+        """Map extra_carrier_ids Many2many field."""
+        vals = {"extra_carrier_ids": [(5, 0, 0)]}  # Clear existing
+        if extra_carriers := record.get("extra_carrier_ids"):
+            binder = self.binder_for("odoo.delivery.carrier")
+            carrier_ids = []
+            for carrier_external_id in extra_carriers:
+                local_carrier = binder.to_internal(carrier_external_id, unwrap=True)
+                if local_carrier:
+                    carrier_ids.append(local_carrier.id)
+            if carrier_ids:
+                vals["extra_carrier_ids"] = [(6, 0, carrier_ids)]
+        return vals
+
 
 class PartnerImporter(Component):
     _name = "odoo.res.partner.importer"
@@ -321,6 +336,16 @@ class PartnerImporter(Component):
                 "odoo.res.country",
                 force=force,
             )
+
+        # Import extra delivery carriers
+        if extra_carrier_ids := self.odoo_record.get("extra_carrier_ids"):
+            _logger.info("Importing extra carriers for partner")
+            for carrier_id in extra_carrier_ids:
+                self._import_dependency(
+                    carrier_id,
+                    "odoo.delivery.carrier",
+                    force=force,
+                )
 
         result = super()._import_dependencies(force=force)
         _logger.info("Dependencies imported for external ID %s", self.external_id)

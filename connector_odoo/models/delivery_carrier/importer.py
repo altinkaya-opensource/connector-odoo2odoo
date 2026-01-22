@@ -40,7 +40,7 @@ class DeliveryCarrierMapper(Component):
         ("carrier_barcode_type", "carrier_barcode_type"),
         ("payment_type", "payment_type"),
         ("margin", "margin"),
-        ("attach_barcode", "attach_barcode"),
+        # ("attach_barcode", "attach_barcode"),
         ("send_sms_customer", "send_sms_customer"),
         ("barcode_text_1", "barcode_text_1"),
         ("weight_calc_percentage", "weight_calc_percentage"),
