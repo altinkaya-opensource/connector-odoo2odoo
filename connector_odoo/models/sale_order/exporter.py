@@ -131,6 +131,7 @@ class SaleOrderExportMapper(Component):
         ("delivery_rating_success", "delivery_rating_success"),
         ("access_token", "access_token"),
         ("client_order_ref", "client_order_ref"),
+        ("note", "note"),
     ]
 
     @only_create
