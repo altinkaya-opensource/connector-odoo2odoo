@@ -58,6 +58,7 @@ class SaleOrderImportMapper(Component):
         ("sale_weight", "sale_weight"),
         ("sale_volume", "sale_volume"),
         ("client_order_ref", "client_order_ref"),
+        ("note", "note"),
         ("access_token", "access_token"),
     ]
 
