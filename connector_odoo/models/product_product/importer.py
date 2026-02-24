@@ -91,6 +91,7 @@ class ProductImportMapper(Component):
         ("insert_installation_price", "insert_installation_price"),
         ("total_customization_price", "total_customization_price"),
         ("customization_prices_auto_update", "customization_prices_auto_update"),
+        ("min_order_qty", "min_order_qty"),
     ]
 
     @mapping
